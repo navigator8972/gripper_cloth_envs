@@ -23,7 +23,7 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Copyright (c) 2008-2019 NVIDIA Corporation. All rights reserved.
+// Copyright (c) 2008-2018 NVIDIA Corporation. All rights reserved.
 // Copyright (c) 2004-2008 AGEIA Technologies, Inc. All rights reserved.
 // Copyright (c) 2001-2004 NovodeX AG. All rights reserved.  
 
@@ -38,9 +38,10 @@
 
 #include "PxPhysicsAPI.h"
 
-#include "snippetcommon/SnippetPrint.h"
-#include "snippetcommon/SnippetPVD.h"
-#include "snippetutils/SnippetUtils.h"
+#include "SnippetCommon/SnippetPrint.h"
+#include "SnippetCommon/SnippetPVD.h"
+#include "SnippetUtils/SnippetUtils.h"
+
 
 using namespace physx;
 
@@ -66,6 +67,7 @@ PxRigidDynamic* createStick(const PxTransform& t)
 	gScene->addActor(*static_stick);
 	return static_stick;
 }
+
 
 PxRigidDynamic* createDynamic(const PxTransform& t, const PxGeometry& geometry, const PxVec3& velocity=PxVec3(0))
 {
@@ -95,7 +97,7 @@ void createStack(const PxTransform& t, PxU32 size, PxReal halfExtent)
 
 void initPhysics(bool interactive)
 {
-	gFoundation = PxCreateFoundation(PX_PHYSICS_VERSION, gAllocator, gErrorCallback);
+	gFoundation = PxCreateFoundation(PX_FOUNDATION_VERSION, gAllocator, gErrorCallback);
 
 	gPvd = PxCreatePvd(*gFoundation);
 	PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
@@ -130,26 +132,28 @@ void initPhysics(bool interactive)
 	// 	createDynamic(PxTransform(PxVec3(0,40,100)), PxSphereGeometry(10), PxVec3(0,-50,-100));
 	
 	createStick(PxTransform(0.0, 0.0, 0.5f));
+
+
 }
 
-void stepPhysics(bool /*interactive*/)
+void stepPhysics(bool interactive)
 {
+	PX_UNUSED(interactive);
 	gScene->simulate(1.0f/60.0f);
 	gScene->fetchResults(true);
 }
 	
-void cleanupPhysics(bool /*interactive*/)
+void cleanupPhysics(bool interactive)
 {
-	PX_RELEASE(gScene);
-	PX_RELEASE(gDispatcher);
-	PX_RELEASE(gPhysics);
-	if(gPvd)
-	{
-		PxPvdTransport* transport = gPvd->getTransport();
-		gPvd->release();	gPvd = NULL;
-		PX_RELEASE(transport);
-	}
-	PX_RELEASE(gFoundation);
+	PX_UNUSED(interactive);
+	gScene->release();
+	gDispatcher->release();
+	gPhysics->release();	
+	PxPvdTransport* transport = gPvd->getTransport();
+	gPvd->release();
+	transport->release();
+	
+	gFoundation->release();
 	
 	printf("SnippetHelloWorld done.\n");
 }

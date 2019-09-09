@@ -23,18 +23,18 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
-// Copyright (c) 2008-2019 NVIDIA Corporation. All rights reserved.
+// Copyright (c) 2008-2018 NVIDIA Corporation. All rights reserved.
 // Copyright (c) 2004-2008 AGEIA Technologies, Inc. All rights reserved.
 // Copyright (c) 2001-2004 NovodeX AG. All rights reserved.  
-#define RENDER_SNIPPET
+
 #ifdef RENDER_SNIPPET
 
 #include <vector>
 
 #include "PxPhysicsAPI.h"
 
-#include "snippetrender/SnippetRender.h"
-#include "snippetrender/SnippetCamera.h"
+#include "SnippetRender/SnippetRender.h"
+#include "SnippetRender/SnippetCamera.h"
 
 using namespace physx;
 
@@ -81,15 +81,11 @@ void renderCallback()
 	PxScene* scene;
 	PxGetPhysics().getScenes(&scene,1);
 	PxU32 nbActors = scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC);
-
-	// printf("%d\n", nbActors);
-	
 	if(nbActors)
 	{
 		std::vector<PxRigidActor*> actors(nbActors);
 		scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC, reinterpret_cast<PxActor**>(&actors[0]), nbActors);
-
-		//process each type of objects
+				//process each type of objects
 		std::vector<PxRigidActor*> stickActors(0);
 		std::vector<PxRigidActor*> clothActors(0);
 		std::vector<PxRigidActor*> gripperActors(0);
