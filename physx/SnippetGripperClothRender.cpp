@@ -26,7 +26,7 @@
 // Copyright (c) 2008-2018 NVIDIA Corporation. All rights reserved.
 // Copyright (c) 2004-2008 AGEIA Technologies, Inc. All rights reserved.
 // Copyright (c) 2001-2004 NovodeX AG. All rights reserved.  
-
+#define RENDER_SNIPPET
 #ifdef RENDER_SNIPPET
 
 #include <vector>
@@ -43,6 +43,10 @@ extern void stepPhysics(bool interactive);
 extern void cleanupPhysics(bool interactive);
 extern void keyPress(unsigned char key, const PxTransform& camera);
 
+extern PxU32* 					gIndices;
+extern std::vector< PxVec3 > 	gClothPos;
+extern std::vector< PxVec3 > 	gClothNormal;
+extern std::vector< PxU32 > 	gClothIndices;
 
 namespace
 {
@@ -72,6 +76,47 @@ void idleCallback()
 	glutPostRedisplay();
 }
 
+void RenderCloth(const std::vector<PxVec3>& pos, const std::vector<PxVec3>& normal, const std::vector< PxU32 >& indices) 
+{
+	//not sure if normals are correct for GL_QUAD, use GL_POINT for now
+	glEnableClientState(GL_VERTEX_ARRAY);
+	// glEnableClientState(GL_NORMAL_ARRAY);
+
+	glVertexPointer(3, GL_FLOAT, sizeof(PxVec3), &(pos[0].x));
+	// glNormalPointer(GL_FLOAT, sizeof(PxVec3), &(normal[0].x));
+	glPointSize(5.0f);
+	glDrawElements(GL_POINTS, indices.size(), GL_UNSIGNED_INT, &indices[0]);
+
+	// glDisableClientState(GL_NORMAL_ARRAY);
+	glDisableClientState(GL_VERTEX_ARRAY);
+	return;
+}
+
+void RenderClothActors(PxActor** actors, const PxU32 numActors, bool shadows, const PxVec3 & color)
+{
+	for(PxU32 i = 0; i < numActors; ++i)
+	{
+		PxCloth* pCloth = static_cast<PxCloth*>(actors[i]);
+		// PxU32 nParticles = pCloth->getNbVirtualParticles();
+		// printf("Number of cloth particles: %d\n", nParticles);
+
+		// for(size_t j=0; j<nParticles; ++j)
+		// {
+		// 	printf("%u ", pIndices[j]);
+		// }
+		// printf("\n");
+
+		//only deal with cloth object
+		if(strcmp(pCloth->getName(), "cloth")==0)
+		{
+			// printf("Length of cloth state variables: %u, %u, %u\n", gClothPos.size(), gClothNormal.size(), gClothIndices.size());
+			RenderCloth(gClothPos, gClothNormal, gClothIndices);
+		}
+	}
+
+	return;
+}
+
 void renderCallback()
 {
 	stepPhysics(true);
@@ -81,33 +126,34 @@ void renderCallback()
 	PxScene* scene;
 	PxGetPhysics().getScenes(&scene,1);
 	PxU32 nbActors = scene->getNbActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC);
-	if(nbActors)
+	PxU32 nbClothActors = scene->getNbActors(PxActorTypeFlag::eCLOTH);
+	if(nbActors && nbClothActors)
 	{
-		std::vector<PxRigidActor*> actors(nbActors);
-		scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC, reinterpret_cast<PxActor**>(&actors[0]), nbActors);
-				//process each type of objects
+		std::vector<PxRigidActor*> rigidActors(nbActors);
+		std::vector<PxActor*> clothActors(nbClothActors);
+		scene->getActors(PxActorTypeFlag::eRIGID_DYNAMIC | PxActorTypeFlag::eRIGID_STATIC, reinterpret_cast<PxActor**>(&rigidActors[0]), nbActors);
+		scene->getActors(PxActorTypeFlag::eCLOTH, &clothActors[0], nbActors);
+
+		//process each type of objects
 		std::vector<PxRigidActor*> stickActors(0);
-		std::vector<PxRigidActor*> clothActors(0);
 		std::vector<PxRigidActor*> gripperActors(0);
 		std::vector<PxRigidActor*> otherActors(0);
 
+		// printf("Number of rigid/cloth actors: %d/%d.\n", nbActors, nbClothActors);
+
 		for(PxU32 i = 0; i < nbActors; ++i)
 		{
-			if(strcmp(actors[i]->getName(), "stick") == 0)
+			if(strcmp(rigidActors[i]->getName(), "stick") == 0)
 			{
-				stickActors.push_back(actors[i]);
+				stickActors.push_back(rigidActors[i]);
 			}
-			else if(strcmp(actors[i]->getName(), "cloth") == 0)
+			else if(strcmp(rigidActors[i]->getName(), "gripper") == 0)
 			{
-				clothActors.push_back(actors[i]);
-			}
-			else if(strcmp(actors[i]->getName(), "gripper") == 0)
-			{
-				gripperActors.push_back(actors[i]);
+				gripperActors.push_back(rigidActors[i]);
 			}
 			else
 			{
-				otherActors.push_back(actors[i]);
+				otherActors.push_back(rigidActors[i]);
 			}
 		}
 
@@ -117,7 +163,9 @@ void renderCallback()
 		}
 		if(clothActors.size()>0)
 		{
-			Snippets::renderActors(&clothActors[0], static_cast<PxU32>(clothActors.size()), true, PxVec3(0.75f, 0.0f, 0.0f));
+			// printf("Will render %u cloth actors.\n", clothActors.size());
+			// Snippets::renderActors(&clothActors[0], static_cast<PxU32>(clothActors.size()), true, PxVec3(0.75f, 0.0f, 0.0f));
+			RenderClothActors(&clothActors[0], static_cast<PxU32>(clothActors.size()), true, PxVec3(0.75f, 0.0f, 0.0f));
 		}
 		if(gripperActors.size()>0)
 		{
@@ -133,6 +181,7 @@ void renderCallback()
 
 	Snippets::finishRender();
 }
+
 
 void exitCallback(void)
 {

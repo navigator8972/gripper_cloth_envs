@@ -35,8 +35,10 @@
 // ****************************************************************************
 
 #include <ctype.h>
+#include <vector>
 
 #include "PxPhysicsAPI.h"
+
 
 #include "SnippetCommon/SnippetPrint.h"
 #include "SnippetCommon/SnippetPVD.h"
@@ -58,7 +60,30 @@ PxMaterial*				gMaterial	= NULL;
 
 PxPvd*                  gPvd        = NULL;
 
-PxReal stackZ = 10.0f;
+PxCloth*				gCloth      = NULL;
+//maintain cloth state for rendering
+std::vector< PxVec3 > 	gClothPos;
+std::vector< PxVec3 > 	gClothNormal;
+std::vector< PxU32 > 	gClothIndices;
+PxU32* 					gIndices 	= NULL;
+
+// two spheres for a tapered capsule and one by itself
+PxClothCollisionSphere   gSpheres[3] = {
+	PxClothCollisionSphere(PxVec3( 0.0f, 0.3f, 1.0f), 0.3f),
+	PxClothCollisionSphere(PxVec3(-0.5f, 0.2f, 0.0f), 0.2f),
+	PxClothCollisionSphere(PxVec3(-1.5f, 0.2f, 0.0f), 0.2f)
+};
+
+// a tetrahedron
+PxClothCollisionTriangle gTriangles[4] = {
+	PxClothCollisionTriangle(PxVec3(-0.3f, 0.0f, -1.3f), PxVec3( 0.3f, 0.6f, -1.3f), PxVec3( 0.3f, 0.0f, -0.7f)),
+	PxClothCollisionTriangle(PxVec3( 0.3f, 0.6f, -1.3f), PxVec3(-0.3f, 0.6f, -0.7f), PxVec3( 0.3f, 0.0f, -0.7f)),
+	PxClothCollisionTriangle(PxVec3(-0.3f, 0.6f, -0.7f), PxVec3(-0.3f, 0.0f, -1.3f), PxVec3( 0.3f, 0.0f, -0.7f)),
+	PxClothCollisionTriangle(PxVec3(-0.3f, 0.0f, -1.3f), PxVec3(-0.3f, 0.6f, -0.7f), PxVec3( 0.3f, 0.6f, -1.3f)),
+};
+
+// PxTransform gClothPose = PxTransform(PxVec3(0), PxQuat(PxPi/4, PxVec3(0, 1, 0))) * PxTransform(PxVec3(0, 0.5f, 0));
+PxTransform gClothPose = PxTransform(PxVec3(0, 0.5f, 0));
 
 PxRigidDynamic* createStick(const PxTransform& t)
 {
@@ -68,31 +93,116 @@ PxRigidDynamic* createStick(const PxTransform& t)
 	return static_stick;
 }
 
-
-PxRigidDynamic* createDynamic(const PxTransform& t, const PxGeometry& geometry, const PxVec3& velocity=PxVec3(0))
+void createCloth()
 {
-	PxRigidDynamic* dynamic = PxCreateDynamic(*gPhysics, t, geometry, *gMaterial, 10.0f);
-	dynamic->setAngularDamping(0.5f);
-	dynamic->setLinearVelocity(velocity);
-	gScene->addActor(*dynamic);
-	return dynamic;
-}
+	// create regular mesh
+	PxU32 resolution = 10;
+	PxU32 numParticles = resolution*resolution;
+	PxU32 numQuads = (resolution-1)*(resolution-1);
 
-void createStack(const PxTransform& t, PxU32 size, PxReal halfExtent)
-{
-	PxShape* shape = gPhysics->createShape(PxBoxGeometry(halfExtent, halfExtent, halfExtent), *gMaterial);
-	for(PxU32 i=0; i<size;i++)
+	// create particles
+	PxClothParticle* particles = new PxClothParticle[numParticles];
+	PxVec3 center(0.5f, -0.3f, -0.3f);
+	PxVec3 delta = 0.5f/(resolution-1) * PxVec3(1.0f, 0.8f, 0.6f);
+	PxClothParticle* pIt = particles;
+	for(PxU32 i=0; i<resolution; ++i)
 	{
-		for(PxU32 j=0;j<size-i;j++)
+		for(PxU32 j=0; j<resolution; ++j, ++pIt)
 		{
-			PxTransform localTm(PxVec3(PxReal(j*2) - PxReal(size-i), PxReal(i*2+1), 0) * halfExtent);
-			PxRigidDynamic* body = gPhysics->createRigidDynamic(t.transform(localTm));
-			body->attachShape(*shape);
-			PxRigidBodyExt::updateMassAndInertia(*body, 10.0f);
-			gScene->addActor(*body);
+			pIt->invWeight = j+1<resolution ? 1.0f : 0.0f;
+			pIt->pos = delta.multiply(PxVec3(PxReal(i), 
+				PxReal(j), -PxReal(j))) - center;
 		}
 	}
-	shape->release();
+
+	// create quads
+	PxU32* quads = new PxU32[4*numQuads];
+	PxU32* iIt = quads;
+	for(PxU32 i=0; i<resolution-1; ++i)
+	{
+		for(PxU32 j=0; j<resolution-1; ++j)
+		{
+			*iIt++ = (i+0)*resolution + (j+0);
+			*iIt++ = (i+1)*resolution + (j+0);
+			*iIt++ = (i+1)*resolution + (j+1);
+			*iIt++ = (i+0)*resolution + (j+1);
+		}
+	}
+
+	// create fabric from mesh
+	PxClothMeshDesc meshDesc;
+	meshDesc.points.count = numParticles;
+	meshDesc.points.stride = sizeof(PxClothParticle);
+	meshDesc.points.data = particles;
+	meshDesc.invMasses.count = numParticles;
+	meshDesc.invMasses.stride = sizeof(PxClothParticle);
+	meshDesc.invMasses.data = &particles->invWeight;
+	meshDesc.quads.count = numQuads;
+	meshDesc.quads.stride = 4*sizeof(PxU32);
+	meshDesc.quads.data = quads;
+
+	// cook fabric
+	PxClothFabric* fabric = PxClothFabricCreate(*gPhysics, meshDesc, PxVec3(0, 1, 0));
+
+	delete[] quads;
+
+	// create cloth and add to scene
+	gCloth = gPhysics->createCloth(gClothPose, *fabric, particles, PxClothFlags(0));
+	gCloth->setName("cloth");
+	gScene->addActor(*gCloth);
+
+	fabric->release();
+	delete[] particles;
+
+	// 240 iterations per/second (4 per-60hz frame)
+	gCloth->setSolverFrequency(240.0f);
+
+	// add virtual particles
+	PxU32* indices = new PxU32[4*4*numQuads];
+	PxU32* vIt = indices;
+	for(PxU32 i=0; i<resolution-1; ++i)
+	{
+		for(PxU32 j=0; j<resolution-1; ++j)
+		{
+			*vIt++ = i*resolution + j;
+			*vIt++ = i*resolution + (j+1);
+			*vIt++ = (i+1)*resolution + (j+1);
+			*vIt++ = 0;
+
+			*vIt++ = i*resolution + (j+1);
+			*vIt++ = (i+1)*resolution + (j+1);
+			*vIt++ = (i+1)*resolution + j;
+			*vIt++ = 0;
+
+			*vIt++ = (i+1)*resolution + (j+1);
+			*vIt++ = (i+1)*resolution + j;
+			*vIt++ = i*resolution + j;
+			*vIt++ = 0;
+
+			*vIt++ = (i+1)*resolution + j;
+			*vIt++ = i*resolution + j;
+			*vIt++ = i*resolution + (j+1);
+			*vIt++ = 0;
+		}
+	}
+
+	// barycentric weights specifying virtual particle position
+	PxVec3 weights = PxVec3(0.6, 0.2, 0.2);
+	gCloth->setVirtualParticles(4*numQuads, indices, 1, &weights);
+
+	delete[] indices;
+
+	// add capsule (referencing spheres[0] and spheres[1] added later)
+	gCloth->addCollisionCapsule(1, 2);
+
+	// add ground plane and tetrahedron convex (referencing planes added later)
+	gCloth->addCollisionConvex(0x01);
+	gCloth->addCollisionConvex(0x1e);
+
+	gCloth->setSelfCollisionDistance(0.005f);
+	gCloth->setSelfCollisionStiffness(1.0f);
+
+	gCloth->setClothFlag(PxClothFlag::eSCENE_COLLISION, true);
 }
 
 void initPhysics(bool interactive)
@@ -125,20 +235,78 @@ void initPhysics(bool interactive)
 	gScene->addActor(*groundPlane);
 	groundPlane->setName("ground");
 
-	// for(PxU32 i=0;i<5;i++)
-	// 	createStack(PxTransform(PxVec3(0,0,stackZ-=10.0f)), 10, 2.0f);
-
-	// if(!interactive)
-	// 	createDynamic(PxTransform(PxVec3(0,40,100)), PxSphereGeometry(10), PxVec3(0,-50,-100));
 	
-	createStick(PxTransform(0.0, 0.0, 0.5f));
+	createStick(PxTransform(0.0, 0.5f, 0.0));
 
-
+	createCloth();
 }
 
 void stepPhysics(bool interactive)
 {
 	PX_UNUSED(interactive);
+
+	// update the cloth local frame
+	// gClothPose = PxTransform(PxVec3(0), PxQuat(PxPi/240, PxVec3(0, 1, 0))) * gClothPose;
+	// gCloth->setTargetPose(gClothPose);
+	printf("Cloth position: %f, %f, %f\n", gClothPose.p.x, gClothPose.p.y, gClothPose.p.z);
+
+	// transform colliders into local cloth space
+	PxTransform invPose = gClothPose.getInverse();
+
+	// 1 sphere plus 1 capsule made from two spheres
+	PxClothCollisionSphere spheres[3];
+	for(int i=0; i<3; ++i)
+	{
+		spheres[i].pos = invPose.transform(gSpheres[i].pos);
+		spheres[i].radius = gSpheres[i].radius;
+	}
+	gCloth->setCollisionSpheres(spheres, 3);
+
+	// tetrahedron made from 4 triangles
+	PxClothCollisionTriangle triangles[4];
+	for(int i=0; i<4; ++i)
+	{
+		triangles[i].vertex0 = invPose.transform(gTriangles[i].vertex0);
+		triangles[i].vertex1 = invPose.transform(gTriangles[i].vertex1);
+		triangles[i].vertex2 = invPose.transform(gTriangles[i].vertex2);
+	}
+	gCloth->setCollisionTriangles(triangles, 4);
+
+	//update cloth global state
+	if(gIndices == NULL)
+	{
+		//only get once...
+		PxU32 nParticles = gCloth->getNbVirtualParticles();
+		gIndices = new PxU32[4*nParticles];
+		gCloth->getVirtualParticles(gIndices);
+		gClothPos.resize(nParticles);
+		gClothNormal.resize(nParticles);
+		gClothIndices.assign(gIndices, gIndices+4*nParticles);
+		// printf("length of gIndices: %d\n", gClothIndices.size());
+	}
+
+	//get particle data
+	PxClothParticleData* pData = gCloth->lockParticleData();
+	PxClothParticle* pParticles = pData->particles;
+	//update the positions
+   	for(PxU32 i=0;i < gClothPos.size();i++) 
+	{
+    	gClothPos[i] = pParticles[i].pos;
+	}
+	pData->unlock();
+	//update normals
+	//update normals
+	for(PxU32 i=0;i < gClothIndices.size();i+=3) {
+		PxVec3 p1 = gClothPos[gClothIndices[i]];
+		PxVec3 p2 = gClothPos[gClothIndices[i+1]];
+		PxVec3 p3 = gClothPos[gClothIndices[i+2]];
+		PxVec3 n  = (p2-p1).cross(p3-p1);
+
+		gClothNormal[gClothIndices[i]]    += n/3.0f ; 
+		gClothNormal[gClothIndices[i+1]]  += n/3.0f ; 
+		gClothNormal[gClothIndices[i+2]]  += n/3.0f ;    
+	}
+
 	gScene->simulate(1.0f/60.0f);
 	gScene->fetchResults(true);
 }
@@ -146,6 +314,7 @@ void stepPhysics(bool interactive)
 void cleanupPhysics(bool interactive)
 {
 	PX_UNUSED(interactive);
+	gCloth->release();
 	gScene->release();
 	gDispatcher->release();
 	gPhysics->release();	
@@ -154,6 +323,11 @@ void cleanupPhysics(bool interactive)
 	transport->release();
 	
 	gFoundation->release();
+
+	if(gIndices != NULL)
+	{
+		delete[] gIndices;
+	}
 	
 	printf("SnippetHelloWorld done.\n");
 }
@@ -162,8 +336,8 @@ void keyPress(unsigned char key, const PxTransform& camera)
 {
 	switch(toupper(key))
 	{
-	case 'B':	createStack(PxTransform(PxVec3(0,0,stackZ-=10.0f)), 10, 2.0f);						break;
-	case ' ':	createDynamic(camera, PxSphereGeometry(3.0f), camera.rotate(PxVec3(0,0,-1))*200);	break;
+	// case 'B':	createStack(PxTransform(PxVec3(0,0,stackZ-=10.0f)), 10, 2.0f);						break;
+	// case ' ':	createDynamic(camera, PxSphereGeometry(3.0f), camera.rotate(PxVec3(0,0,-1))*200);	break;
 	}
 }
 
