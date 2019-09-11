@@ -48,6 +48,10 @@ extern std::vector< PxVec3 > 	gClothPos;
 extern std::vector< PxVec3 > 	gClothNormal;
 extern std::vector< PxU32 > 	gClothIndices;
 
+const PxU32 			nCollisionSpheres = 25;
+const float				collisionSphereRadius=0.01f;
+extern PxClothCollisionSphere  	gCollisionSpheres[]; 
+
 namespace
 {
 Snippets::Camera*	sCamera;
@@ -92,6 +96,20 @@ void RenderCloth(const std::vector<PxVec3>& pos, const std::vector<PxVec3>& norm
 	return;
 }
 
+void RenderSpheres()
+{
+	for(PxU32 i=0; i<nCollisionSpheres; ++i)
+	{
+		//Sphere
+		glPushMatrix();
+		glTranslatef(gCollisionSpheres[i].pos.x, gCollisionSpheres[i].pos.y, gCollisionSpheres[i].pos.z);
+		glScalef(collisionSphereRadius,collisionSphereRadius,collisionSphereRadius);
+		glutSolidSphere(1, 10, 10);		
+		glPopMatrix();		
+	}
+	return;
+}
+
 void RenderClothActors(PxActor** actors, const PxU32 numActors, bool shadows, const PxVec3 & color)
 {
 	for(PxU32 i = 0; i < numActors; ++i)
@@ -111,6 +129,7 @@ void RenderClothActors(PxActor** actors, const PxU32 numActors, bool shadows, co
 		{
 			// printf("Length of cloth state variables: %u, %u, %u\n", gClothPos.size(), gClothNormal.size(), gClothIndices.size());
 			RenderCloth(gClothPos, gClothNormal, gClothIndices);
+			RenderSpheres();
 		}
 	}
 

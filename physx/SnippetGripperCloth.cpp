@@ -47,6 +47,7 @@
 
 using namespace physx;
 
+bool					bRunSim = false;
 PxDefaultAllocator		gAllocator;
 PxDefaultErrorCallback	gErrorCallback;
 
@@ -82,12 +83,18 @@ PxClothCollisionTriangle gTriangles[4] = {
 	PxClothCollisionTriangle(PxVec3(-0.3f, 0.0f, -1.3f), PxVec3(-0.3f, 0.6f, -0.7f), PxVec3( 0.3f, 0.6f, -1.3f)),
 };
 
-// PxTransform gClothPose = PxTransform(PxVec3(0), PxQuat(PxPi/4, PxVec3(0, 1, 0))) * PxTransform(PxVec3(0, 0.5f, 0));
-PxTransform gClothPose = PxTransform(PxVec3(0, 0.5f, 0));
+const PxU32 			nCollisionSpheres = 25;
+const float				collisionSphereRadius = 0.01f;
+//a grid of spheres for cloth collision
+PxU32					gCollisionSphereIndices[nCollisionSpheres];
+PxClothCollisionSphere  gCollisionSpheres[nCollisionSpheres]; 
+
+PxTransform gClothPose = PxTransform(PxVec3(0), PxQuat(PxPi/4, PxVec3(0, 1, 0))) * PxTransform(PxVec3(0, 0.5f, 0));
+// PxTransform gClothPose = PxTransform(PxVec3(0, 0.5f, 0));
 
 PxRigidDynamic* createStick(const PxTransform& t)
 {
-	PxRigidDynamic* static_stick = PxCreateKinematic(*gPhysics, t, PxCapsuleGeometry(0.02f, 0.5f), *gMaterial, 7.8f);
+	PxRigidDynamic* static_stick = PxCreateKinematic(*gPhysics, t, PxCapsuleGeometry(0.1f, 0.5f), *gMaterial, 7.8f);
 	static_stick->setName("stick");
 	gScene->addActor(*static_stick);
 	return static_stick;
@@ -96,22 +103,34 @@ PxRigidDynamic* createStick(const PxTransform& t)
 void createCloth()
 {
 	// create regular mesh
-	PxU32 resolution = 10;
+	PxU32 resolution = 16;	//segmentfault for a resolution more than 16... well, thats beacuse it supports at most 4096 points https://github.com/xarray/osgRecipes/blob/master/integrations/osgphysx3/SampleCloth.cpp
 	PxU32 numParticles = resolution*resolution;
 	PxU32 numQuads = (resolution-1)*(resolution-1);
 
 	// create particles
 	PxClothParticle* particles = new PxClothParticle[numParticles];
 	PxVec3 center(0.5f, -0.3f, -0.3f);
-	PxVec3 delta = 0.5f/(resolution-1) * PxVec3(1.0f, 0.8f, 0.6f);
+	PxVec3 delta = 1.0f/(resolution-1) * PxVec3(1.0f, 0.8f, 0.6f);
 	PxClothParticle* pIt = particles;
+
+	PxU32 k=0;	//for collision spheres
 	for(PxU32 i=0; i<resolution; ++i)
 	{
 		for(PxU32 j=0; j<resolution; ++j, ++pIt)
 		{
-			pIt->invWeight = j+1<resolution ? 1.0f : 0.0f;
+			//this is the line fixing the top line by setting a zero inverse weight
+			// pIt->invWeight = j+1<resolution ? 1.0f : 0.0f;
+			pIt->invWeight = 1.0;
 			pIt->pos = delta.multiply(PxVec3(PxReal(i), 
 				PxReal(j), -PxReal(j))) - center;
+
+			if((i%4==0 || i==resolution-1) && (j%4==0 || j==resolution-1))
+			{
+				// printf("i: %u, j: %u\n", i, j);
+				gCollisionSpheres[k] = PxClothCollisionSphere(pIt->pos, collisionSphereRadius);
+				gCollisionSphereIndices[k] = i*resolution+j;
+				k++;
+			}
 		}
 	}
 
@@ -147,7 +166,7 @@ void createCloth()
 	delete[] quads;
 
 	// create cloth and add to scene
-	gCloth = gPhysics->createCloth(gClothPose, *fabric, particles, PxClothFlags(0));
+	gCloth = gPhysics->createCloth(gClothPose, *fabric, particles, PxClothFlag::eSCENE_COLLISION);
 	gCloth->setName("cloth");
 	gScene->addActor(*gCloth);
 
@@ -193,16 +212,28 @@ void createCloth()
 	delete[] indices;
 
 	// add capsule (referencing spheres[0] and spheres[1] added later)
-	gCloth->addCollisionCapsule(1, 2);
+	// gCloth->addCollisionCapsule(1, 2);
 
 	// add ground plane and tetrahedron convex (referencing planes added later)
-	gCloth->addCollisionConvex(0x01);
-	gCloth->addCollisionConvex(0x1e);
+	// gCloth->addCollisionConvex(0x01);
+	// gCloth->addCollisionConvex(0x1e);
 
-	gCloth->setSelfCollisionDistance(0.005f);
-	gCloth->setSelfCollisionStiffness(1.0f);
+	// add collision spheres
+	for(PxU32 i=0; i<nCollisionSpheres; ++i)
+	{
+		gCloth->addCollisionSphere(gCollisionSpheres[i]);
+	}
+
+	gCloth->setSelfCollisionDistance(0.01f);
+	gCloth->setSelfCollisionStiffness(0.1f);
 
 	gCloth->setClothFlag(PxClothFlag::eSCENE_COLLISION, true);
+
+	gCloth->setInertiaScale( 0.5f );
+	gCloth->setDampingCoefficient( PxVec3(0.2f, 0.2f, 0.2f) );
+	gCloth->setDragCoefficient( 0.1f );
+	// segmentfault when setting non-zero friction coefficient, why?
+	// gCloth->setFrictionCoefficient(0.5f);
 }
 
 void initPhysics(bool interactive)
@@ -248,29 +279,29 @@ void stepPhysics(bool interactive)
 	// update the cloth local frame
 	// gClothPose = PxTransform(PxVec3(0), PxQuat(PxPi/240, PxVec3(0, 1, 0))) * gClothPose;
 	// gCloth->setTargetPose(gClothPose);
-	printf("Cloth position: %f, %f, %f\n", gClothPose.p.x, gClothPose.p.y, gClothPose.p.z);
+	// printf("Cloth position: %f, %f, %f\n", gClothPose.p.x, gClothPose.p.y, gClothPose.p.z);
 
 	// transform colliders into local cloth space
-	PxTransform invPose = gClothPose.getInverse();
+	// PxTransform invPose = gClothPose.getInverse();
 
-	// 1 sphere plus 1 capsule made from two spheres
-	PxClothCollisionSphere spheres[3];
-	for(int i=0; i<3; ++i)
-	{
-		spheres[i].pos = invPose.transform(gSpheres[i].pos);
-		spheres[i].radius = gSpheres[i].radius;
-	}
-	gCloth->setCollisionSpheres(spheres, 3);
+	// // 1 sphere plus 1 capsule made from two spheres
+	// PxClothCollisionSphere spheres[3];
+	// for(int i=0; i<3; ++i)
+	// {
+	// 	spheres[i].pos = invPose.transform(gSpheres[i].pos);
+	// 	spheres[i].radius = gSpheres[i].radius;
+	// }
+	// gCloth->setCollisionSpheres(spheres, 3);
 
-	// tetrahedron made from 4 triangles
-	PxClothCollisionTriangle triangles[4];
-	for(int i=0; i<4; ++i)
-	{
-		triangles[i].vertex0 = invPose.transform(gTriangles[i].vertex0);
-		triangles[i].vertex1 = invPose.transform(gTriangles[i].vertex1);
-		triangles[i].vertex2 = invPose.transform(gTriangles[i].vertex2);
-	}
-	gCloth->setCollisionTriangles(triangles, 4);
+	// // tetrahedron made from 4 triangles
+	// PxClothCollisionTriangle triangles[4];
+	// for(int i=0; i<4; ++i)
+	// {
+	// 	triangles[i].vertex0 = invPose.transform(gTriangles[i].vertex0);
+	// 	triangles[i].vertex1 = invPose.transform(gTriangles[i].vertex1);
+	// 	triangles[i].vertex2 = invPose.transform(gTriangles[i].vertex2);
+	// }
+	// gCloth->setCollisionTriangles(triangles, 4);
 
 	//update cloth global state
 	if(gIndices == NULL)
@@ -295,7 +326,7 @@ void stepPhysics(bool interactive)
 	}
 	pData->unlock();
 	//update normals
-	//update normals
+	//update normals, this is triangles, how about QUAD?
 	for(PxU32 i=0;i < gClothIndices.size();i+=3) {
 		PxVec3 p1 = gClothPos[gClothIndices[i]];
 		PxVec3 p2 = gClothPos[gClothIndices[i+1]];
@@ -307,8 +338,19 @@ void stepPhysics(bool interactive)
 		gClothNormal[gClothIndices[i+2]]  += n/3.0f ;    
 	}
 
-	gScene->simulate(1.0f/60.0f);
-	gScene->fetchResults(true);
+	//update collision spheres positions
+	for(PxU32 i=0;i < nCollisionSpheres; ++i)
+	{
+		gCollisionSpheres[i] = PxClothCollisionSphere(gClothPos[gCollisionSphereIndices[i]], collisionSphereRadius);
+	}
+	// gCloth->setCollisionSpheres(gCollisionSpheres, nCollisionSpheres);
+
+	if(bRunSim)
+	{
+		gScene->simulate(1.0f/60.0f);
+		gScene->fetchResults(true);
+	}
+	
 }
 	
 void cleanupPhysics(bool interactive)
@@ -337,7 +379,7 @@ void keyPress(unsigned char key, const PxTransform& camera)
 	switch(toupper(key))
 	{
 	// case 'B':	createStack(PxTransform(PxVec3(0,0,stackZ-=10.0f)), 10, 2.0f);						break;
-	// case ' ':	createDynamic(camera, PxSphereGeometry(3.0f), camera.rotate(PxVec3(0,0,-1))*200);	break;
+		case ' ':	bRunSim = !bRunSim;	break;
 	}
 }
 
