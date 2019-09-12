@@ -48,8 +48,8 @@ extern std::vector< PxVec3 > 	gClothPos;
 extern std::vector< PxVec3 > 	gClothNormal;
 extern std::vector< PxU32 > 	gClothIndices;
 
-const PxU32 			nCollisionSpheres = 25;
-const float				collisionSphereRadius=0.01f;
+const PxU32 					nCollisionSpheres = 25;
+const float						collisionSphereRadius=0.02f;
 extern PxClothCollisionSphere  	gCollisionSpheres[]; 
 
 namespace

@@ -84,17 +84,16 @@ PxClothCollisionTriangle gTriangles[4] = {
 };
 
 const PxU32 			nCollisionSpheres = 25;
-const float				collisionSphereRadius = 0.01f;
+const float				collisionSphereRadius = 0.02f;
 //a grid of spheres for cloth collision
 PxU32					gCollisionSphereIndices[nCollisionSpheres];
 PxClothCollisionSphere  gCollisionSpheres[nCollisionSpheres]; 
 
-PxTransform gClothPose = PxTransform(PxVec3(0), PxQuat(PxPi/4, PxVec3(0, 1, 0))) * PxTransform(PxVec3(0, 0.5f, 0));
-// PxTransform gClothPose = PxTransform(PxVec3(0, 0.5f, 0));
+PxTransform gClothPose = PxTransform(PxVec3(0), PxQuat(PxPi/4, PxVec3(0, 1, 0))) * PxTransform(PxVec3(0, 0.6f, 0));
 
 PxRigidDynamic* createStick(const PxTransform& t)
 {
-	PxRigidDynamic* static_stick = PxCreateKinematic(*gPhysics, t, PxCapsuleGeometry(0.1f, 0.5f), *gMaterial, 7.8f);
+	PxRigidDynamic* static_stick = PxCreateKinematic(*gPhysics, t, PxCapsuleGeometry(0.02f, 0.5f), *gMaterial, 7.8f);
 	static_stick->setName("stick");
 	gScene->addActor(*static_stick);
 	return static_stick;
@@ -109,8 +108,9 @@ void createCloth()
 
 	// create particles
 	PxClothParticle* particles = new PxClothParticle[numParticles];
-	PxVec3 center(0.5f, -0.3f, -0.3f);
-	PxVec3 delta = 1.0f/(resolution-1) * PxVec3(1.0f, 0.8f, 0.6f);
+	PxVec3 center(0.5f, 0.0f, -0.3f);
+	
+	PxVec3 delta = 1.0f/(resolution-1) * PxVec3(1.0f, 0.0f, 0.6f);
 	PxClothParticle* pIt = particles;
 
 	PxU32 k=0;	//for collision spheres
@@ -122,7 +122,7 @@ void createCloth()
 			// pIt->invWeight = j+1<resolution ? 1.0f : 0.0f;
 			pIt->invWeight = 1.0;
 			pIt->pos = delta.multiply(PxVec3(PxReal(i), 
-				PxReal(j), -PxReal(j))) - center;
+				0, -PxReal(j))) - center;
 
 			if((i%4==0 || i==resolution-1) && (j%4==0 || j==resolution-1))
 			{
@@ -161,7 +161,7 @@ void createCloth()
 	meshDesc.quads.data = quads;
 
 	// cook fabric
-	PxClothFabric* fabric = PxClothFabricCreate(*gPhysics, meshDesc, PxVec3(0, 1, 0));
+	PxClothFabric* fabric = PxClothFabricCreate(*gPhysics, meshDesc, PxVec3(0, -1, 0));
 
 	delete[] quads;
 
@@ -232,8 +232,8 @@ void createCloth()
 	gCloth->setInertiaScale( 0.5f );
 	gCloth->setDampingCoefficient( PxVec3(0.2f, 0.2f, 0.2f) );
 	gCloth->setDragCoefficient( 0.1f );
-	// segmentfault when setting non-zero friction coefficient, why?
-	// gCloth->setFrictionCoefficient(0.5f);
+	// segmentfault when setting non-zero friction coefficient, why? seems requiring contact bodies
+	gCloth->setFrictionCoefficient(0.5f);
 }
 
 void initPhysics(bool interactive)
@@ -322,7 +322,8 @@ void stepPhysics(bool interactive)
 	//update the positions
    	for(PxU32 i=0;i < gClothPos.size();i++) 
 	{
-    	gClothPos[i] = pParticles[i].pos;
+		//it seems that particle pos is only local to the cloth pose...
+    	gClothPos[i] = gClothPose.transform(pParticles[i].pos);
 	}
 	pData->unlock();
 	//update normals
@@ -343,6 +344,8 @@ void stepPhysics(bool interactive)
 	{
 		gCollisionSpheres[i] = PxClothCollisionSphere(gClothPos[gCollisionSphereIndices[i]], collisionSphereRadius);
 	}
+	// seems the collision spheres might be unncessary after we have enough virtual particles for collision detection
+	// the previous failure about collision is because of the transposed visualization, the post on 3.1 seems not completely correct!
 	// gCloth->setCollisionSpheres(gCollisionSpheres, nCollisionSpheres);
 
 	if(bRunSim)
