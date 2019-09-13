@@ -89,11 +89,11 @@ const float				collisionSphereRadius = 0.02f;
 PxU32					gCollisionSphereIndices[nCollisionSpheres];
 PxClothCollisionSphere  gCollisionSpheres[nCollisionSpheres]; 
 
-PxTransform gClothPose = PxTransform(PxVec3(0), PxQuat(PxPi/4, PxVec3(0, 1, 0))) * PxTransform(PxVec3(0, 0.6f, 0));
+PxTransform gClothPose = PxTransform(PxVec3(0), PxQuat(0*PxPi/4, PxVec3(0, 1, 0))) * PxTransform(PxVec3(0, 0.6f, 0));
 
 PxRigidDynamic* createStick(const PxTransform& t)
 {
-	PxRigidDynamic* static_stick = PxCreateKinematic(*gPhysics, t, PxCapsuleGeometry(0.02f, 0.5f), *gMaterial, 7.8f);
+	PxRigidDynamic* static_stick = PxCreateKinematic(*gPhysics, t, PxCapsuleGeometry(0.02f, 1.0f), *gMaterial, 7.8f);
 	static_stick->setName("stick");
 	gScene->addActor(*static_stick);
 	return static_stick;
@@ -236,6 +236,44 @@ void createCloth()
 	gCloth->setFrictionCoefficient(0.5f);
 }
 
+PxRigidDynamic* 		gGripper 	= NULL;
+PxRigidDynamic* 		gFinger1 	= NULL;
+PxRigidDynamic* 		gFinger2 	= NULL;
+PxD6Joint*				gJoint1 	= NULL;
+PxD6Joint*				gJoint2 	= NULL;
+
+void createGripper(const PxTransform& t)
+{
+	gGripper = PxCreateKinematic(*gPhysics, t, PxBoxGeometry(0.05f, 0.01f, 0.1f), *gMaterial, 2.7f);
+	gGripper->setName("gripper");
+
+
+	gFinger1 = PxCreateDynamic(*gPhysics, t.transform(PxTransform(0.0f, 0.11f, -0.08f)), PxBoxGeometry(0.05f, 0.1f, 0.02f), *gMaterial, 2.7f);
+	gFinger1->setName("gripper_finger1");
+
+	gFinger2 = PxCreateDynamic(*gPhysics, t.transform(PxTransform(0.0f, 0.11f, 0.08f)), PxBoxGeometry(0.05f, 0.1f, 0.02f), *gMaterial, 2.7f);
+	gFinger2->setName("gripper_finger2");
+
+	//slider joints, use D6 joint as it allows us to drive it
+	PxD6JointDrive drive(100.0f, 2.0f, PX_MAX_F32, true);
+
+	gJoint1 = PxD6JointCreate(*gPhysics, gGripper, PxTransform(PxVec3(0.0f, 0.01f, -0.08f)), 
+			gFinger1, PxTransform(PxVec3(0.0f, -0.1f, 0.0f)));
+	gJoint1->setMotion(PxD6Axis::eZ, PxD6Motion::eFREE);
+	gJoint1->setDrive(PxD6Drive::eZ, drive);
+
+	gJoint2 = PxD6JointCreate(*gPhysics, gGripper, PxTransform(PxVec3(0.0f, 0.01f, 0.08f)), 
+			gFinger2, PxTransform(PxVec3(0.0f, -0.1f, 0.0f)));
+	gJoint2->setMotion(PxD6Axis::eZ, PxD6Motion::eFREE);
+	gJoint2->setDrive(PxD6Drive::eZ, drive);
+
+	gScene->addActor(*gGripper);
+	gScene->addActor(*gFinger1);
+	gScene->addActor(*gFinger2);
+
+	return;
+}
+
 void initPhysics(bool interactive)
 {
 	gFoundation = PxCreateFoundation(PX_FOUNDATION_VERSION, gAllocator, gErrorCallback);
@@ -270,38 +308,13 @@ void initPhysics(bool interactive)
 	createStick(PxTransform(0.0, 0.5f, 0.0));
 
 	createCloth();
+
+	createGripper(PxTransform(0.0, 0.05f, 0.0f));
 }
 
 void stepPhysics(bool interactive)
 {
 	PX_UNUSED(interactive);
-
-	// update the cloth local frame
-	// gClothPose = PxTransform(PxVec3(0), PxQuat(PxPi/240, PxVec3(0, 1, 0))) * gClothPose;
-	// gCloth->setTargetPose(gClothPose);
-	// printf("Cloth position: %f, %f, %f\n", gClothPose.p.x, gClothPose.p.y, gClothPose.p.z);
-
-	// transform colliders into local cloth space
-	// PxTransform invPose = gClothPose.getInverse();
-
-	// // 1 sphere plus 1 capsule made from two spheres
-	// PxClothCollisionSphere spheres[3];
-	// for(int i=0; i<3; ++i)
-	// {
-	// 	spheres[i].pos = invPose.transform(gSpheres[i].pos);
-	// 	spheres[i].radius = gSpheres[i].radius;
-	// }
-	// gCloth->setCollisionSpheres(spheres, 3);
-
-	// // tetrahedron made from 4 triangles
-	// PxClothCollisionTriangle triangles[4];
-	// for(int i=0; i<4; ++i)
-	// {
-	// 	triangles[i].vertex0 = invPose.transform(gTriangles[i].vertex0);
-	// 	triangles[i].vertex1 = invPose.transform(gTriangles[i].vertex1);
-	// 	triangles[i].vertex2 = invPose.transform(gTriangles[i].vertex2);
-	// }
-	// gCloth->setCollisionTriangles(triangles, 4);
 
 	//update cloth global state
 	if(gIndices == NULL)
@@ -379,10 +392,55 @@ void cleanupPhysics(bool interactive)
 
 void keyPress(unsigned char key, const PxTransform& camera)
 {
+	// PhysX has occupied ASDW and disabled UP/DOWN/LEFT/RIGHT, use JKLI, O/P
+	// printf("Pressed %u\n", static_cast<unsigned int>(key));
 	switch(toupper(key))
 	{
-	// case 'B':	createStack(PxTransform(PxVec3(0,0,stackZ-=10.0f)), 10, 2.0f);						break;
 		case ' ':	bRunSim = !bRunSim;	break;
+		case 'J':
+			if(gGripper!=NULL)
+			{
+				gGripper->setKinematicTarget(gGripper->getGlobalPose().transform(PxTransform(-0.005f, 0, 0)));
+			}	
+			break;
+		case 'L':
+			if(gGripper!=NULL)
+			{
+				gGripper->setKinematicTarget(gGripper->getGlobalPose().transform(PxTransform(0.005f, 0, 0)));
+			}	
+			break;
+		case 'I':	
+			if(gGripper!=NULL)
+			{
+				gGripper->setKinematicTarget(gGripper->getGlobalPose().transform(PxTransform(0, 0.005f, 0)));
+			}
+			break;
+		case 'K':	
+			if(gGripper!=NULL)
+			{
+				gGripper->setKinematicTarget(gGripper->getGlobalPose().transform(PxTransform(0, -0.005f, 0)));
+			}
+			break;
+		case 'O':
+			if(gJoint1!=NULL && gJoint2!=NULL && gGripper!=NULL)
+			{
+				// printf("%f, %f, %f\n", gJoint1->getDrivePosition().p.x, gJoint1->getDrivePosition().p.y, gJoint1->getDrivePosition().p.z);
+				gJoint1->setDrivePosition(gJoint1->getDrivePosition().transform(PxTransform(0, 0, -0.002f)));
+				gJoint2->setDrivePosition(gJoint2->getDrivePosition().transform(PxTransform(0, 0, 0.002f)));
+
+				//seems we need to set some pose to trigger the update, otherwise, setting a new drive position wont immediately apply the update
+				gGripper->setKinematicTarget(gGripper->getGlobalPose());
+			}	
+			break;
+		case 'P':
+			if(gJoint1!=NULL && gJoint2!=NULL && gGripper!=NULL)
+			{
+				gJoint1->setDrivePosition(gJoint1->getDrivePosition().transform(PxTransform(0, 0, 0.002f)));
+				gJoint2->setDrivePosition(gJoint2->getDrivePosition().transform(PxTransform(0, 0, -0.002f)));
+
+				gGripper->setKinematicTarget(gGripper->getGlobalPose());
+			}		
+			break;
 	}
 }
 

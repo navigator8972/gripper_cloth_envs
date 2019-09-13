@@ -30,6 +30,7 @@
 #ifdef RENDER_SNIPPET
 
 #include <vector>
+#include <string>
 
 #include "PxPhysicsAPI.h"
 
@@ -166,7 +167,7 @@ void renderCallback()
 			{
 				stickActors.push_back(rigidActors[i]);
 			}
-			else if(strcmp(rigidActors[i]->getName(), "gripper") == 0)
+			else if(std::string(rigidActors[i]->getName()).rfind("gripper", 0) == 0)
 			{
 				gripperActors.push_back(rigidActors[i]);
 			}
