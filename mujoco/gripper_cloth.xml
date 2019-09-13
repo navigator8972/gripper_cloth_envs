@@ -32,14 +32,39 @@
         <geom name="ground" type="plane" size="0 0 1" pos="0 0 0" quat="1 0 0 0" material="matplane" condim="1"/>
 
 
-        <body name="stick" pos="0 0 0.5" quat="0 0.707 0 0.707" mocap="true">
-            <geom size="0.02 0.5" type="capsule"/>
-
+        <body name="stick" pos="0 0 0.5" quat="0 0.707 0 0.707">
+            <geom size="0.02 0.5" type="capsule" friction="0.2 0.005 0.0001"/>
         </body>
 
+        <body name="gripper_base" pos="0 0 0.05" quat="0 0 0 1">
+            <!-- okay, i misunderstood this freejoint thing, free joint makes your body subject to gravity dynamics. by default the object is constrained in a fixed way... -->
+            <!-- <freejoint name="base_float"/> -->
+            <geom size="0.05 0.1 0.01" type="box" density="2.7"/>
+            <joint name="base_joint_x" type="slide" pos="0 0 0" axis="1 0 0" range="-45 45" damping="2" stiffness="100" armature="0.02" />
+            <joint name="base_joint_y" type="slide" pos="0 0 0" axis="0 1 0" range="-45 45" damping="2" stiffness="100" armature="0.02" />
+            <joint name="base_joint_z" type="slide" pos="0 0 0" axis="0 0 1" range="-45 45" damping="2" stiffness="100" armature="0.02" />
+            
+            <body name="gripper_finger1" pos="0 -0.08 0.11" quat="0 0 0 1">
+                <geom size="0.05 0.02 0.1" type="box" density="2.7"/>
+                <joint name="gripper_joint1" type="slide" pos="0 0 -0.1" axis="0 1 0" range="-45 45" damping="2" stiffness="100" armature="0.02" />
+            </body>
+
+            <body name="gripper_finger2" pos="0 0.08 0.11" quat="0 0 0 1">
+                <geom size="0.05 0.02 0.1" type="box" density="2.7"/>
+                <joint name="gripper_joint2" type="slide" pos="0 0 -0.1" axis="0 1 0" range="-45 45" damping="2" stiffness="100" armature="0.02" />
+            </body>    
+        </body>
         
     </worldbody>
 
     <include file="cloth_no_skin.xml"/>
+
+    <actuator>
+        <motor name="gripper_base_actuator_x"       gear="200" joint="base_joint_x" />
+        <!-- <motor name="gripper_base_actuator_y"       gear="200" joint="base_joint_y" /> -->
+        <motor name="gripper_base_actuator_z"       gear="200" joint="base_joint_z" />
+        <motor name="gripper_fingers_actuator1"       gear="200" joint="gripper_joint1" />
+        <motor name="gripper_fingers_actuator2"       gear="200" joint="gripper_joint2" />
+    </actuator>
 </mujoco>
 

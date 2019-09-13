@@ -20,7 +20,7 @@
             <freejoint/>
             <composite type="cloth" count="11 11 1" spacing="0.05" flatinertia="0.01">
                 <joint kind="main" damping="0.001"/>
-                <geom type="capsule" size="0.01 0.005" rgba=".8 .2 .1 1"/>
+                <geom type="capsule" size="0.01 0.005" rgba=".8 .2 .1 1" friction="0.2 0.005 0.0001"/>
             </composite>
         </body> 
 
