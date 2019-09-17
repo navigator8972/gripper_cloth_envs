@@ -252,10 +252,10 @@ void App_GripperCloth::initPhysics()
 		psb->getCollisionShape()->setMargin(0.02);
 
 #ifndef USE_DEFORMABLE_BODY
-		// btSoftBody::Material* pm = psb->appendMaterial();
-		// pm->m_kLST = 0.4;
-		// pm->m_flags -= btSoftBody::fMaterial::DebugDraw;
-		// psb->generateBendingConstraints(2, pm);
+		btSoftBody::Material* pm = psb->appendMaterial();
+		pm->m_kLST = 0.4;
+		pm->m_flags -= btSoftBody::fMaterial::DebugDraw;
+		psb->generateBendingConstraints(2, pm);
 		psb->setTotalMass(0.05);
 
 		psb->m_cfg.piterations = 30;
@@ -264,7 +264,12 @@ void App_GripperCloth::initPhysics()
 
 		//dynamic friction, alleviate drifting on the pole
 		psb->m_cfg.kDF = 2;
-		// psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RD;
+		psb->generateClusters(32);
+		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RS;
+		psb->m_cfg.collisions |= btSoftBody::fCollision::CL_SELF;
+		// psb->m_cfg.collisions = btSoftBody::fCollision::CL_SS + btSoftBody::fCollision::CL_RS
+		// + btSoftBody::fCollision::CL_SELF
+		// ;
 #else
 		psb->generateBendingConstraints(2);
 
@@ -273,7 +278,7 @@ void App_GripperCloth::initPhysics()
 		// psb->setDampingCoefficient(0.3);
 		psb->m_cfg.kKHR = 1; // collision hardness with kinematic objects
 		psb->m_cfg.kCHR = 1; // collision hardness with rigid body
-		psb->m_cfg.kDF = 2;
+		psb->m_cfg.kDF = 2;  //dynamic friction, alleviate drifting on the pole
 		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RD + btSoftBody::fCollision::CL_SELF;
 #endif
 
