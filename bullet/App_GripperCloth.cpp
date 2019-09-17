@@ -43,7 +43,7 @@ subject to the following restrictions:
 
 #include "CommonInterfaces/CommonRigidBodyBase.h"
 
-#define USE_DEFORMABLE_BODY
+// #define USE_DEFORMABLE_BODY
 
 const btScalar PI(3.1415926535897932384626433832795028841972);
 
@@ -57,6 +57,9 @@ struct App_GripperCloth : public CommonRigidBodyBase
 	}
 	virtual ~App_GripperCloth() {}
 	virtual void initPhysics();
+#ifndef USE_DEFORMABLE_BODY	
+	void exitPhysics();
+#endif
 
 	void resetCamera()
 	{
@@ -211,14 +214,15 @@ void App_GripperCloth::initPhysics()
 
 	// create a stick
 	{
-		btCapsuleShape* stickShape = new btCapsuleShape(0.02, 0.5);
-		m_collisionShapes.push_back(stickShape);
+		btCapsuleShape* stickShape = new btCapsuleShape(0.02, 1);
+		// stickShape->setMargin(0.05);
 
 		btTransform initTransform(btQuaternion(btVector3(btScalar(1.0f), 0, 0), btScalar(PI/2)), btVector3(0.0, 0.5f, 0.0));
 
 		btScalar mass(0.);
 
-		createRigidBody(mass, initTransform, stickShape);
+		btRigidBody* stickBody = createRigidBody(mass, initTransform, stickShape);
+		stickBody->setFriction(0.8f);
 	}
 
 
@@ -245,29 +249,43 @@ void App_GripperCloth::initPhysics()
 											0, true);
 #endif
 
-		psb->getCollisionShape()->setMargin(0.01);
+		psb->getCollisionShape()->setMargin(0.02);
 
 #ifndef USE_DEFORMABLE_BODY
-		btSoftBody::Material* pm = psb->appendMaterial();
-		pm->m_kLST = 0.4;
-		pm->m_flags -= btSoftBody::fMaterial::DebugDraw;
-		psb->generateBendingConstraints(2, pm);
+		// btSoftBody::Material* pm = psb->appendMaterial();
+		// pm->m_kLST = 0.4;
+		// pm->m_flags -= btSoftBody::fMaterial::DebugDraw;
+		// psb->generateBendingConstraints(2, pm);
+		psb->setTotalMass(0.05);
+
+		psb->m_cfg.piterations = 30;
+		psb->m_cfg.citerations = 30;
+		psb->m_cfg.diterations = 30;
+
+		//dynamic friction, alleviate drifting on the pole
+		psb->m_cfg.kDF = 2;
+		// psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RD;
 #else
 		psb->generateBendingConstraints(2);
+
+		psb->setTotalMass(0.1);
+		// psb->setSpringStiffness(10);
+		// psb->setDampingCoefficient(0.3);
+		psb->m_cfg.kKHR = 1; // collision hardness with kinematic objects
+		psb->m_cfg.kCHR = 1; // collision hardness with rigid body
+		psb->m_cfg.kDF = 2;
+		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RD + btSoftBody::fCollision::CL_SELF;
 #endif
 
 		
-		psb->setTotalMass(0.1);
-		psb->setSpringStiffness(10);
-		psb->setDampingCoefficient(0.3);
-		psb->m_cfg.kKHR = 1; // collision hardness with kinematic objects
-		psb->m_cfg.kCHR = 1; // collision hardness with rigid body
-		psb->m_cfg.kDF = 1;
-		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RD;
+
 
 #ifdef USE_DEFORMABLE_BODY		
 		getDeformableDynamicsWorld()->addSoftBody(psb);
-		// getDeformableDynamicsWorld()->addForce(psb, new btDeformableMassSpringForce());
+		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(.05,.04, true);
+		getDeformableDynamicsWorld()->addForce(psb, mass_spring);
+		btDeformableNeoHookeanForce* neohookean = new btDeformableNeoHookeanForce(5,10);
+		getDeformableDynamicsWorld()->addForce(psb, neohookean);
 		getDeformableDynamicsWorld()->addForce(psb, new btDeformableGravityForce(gravity));
 #else
 		getSoftDynamicsWorld()->addSoftBody(psb);
@@ -277,6 +295,49 @@ void App_GripperCloth::initPhysics()
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
+#ifndef USE_DEFORMABLE_BODY	
+void App_GripperCloth::exitPhysics()
+{
+	//cleanup in the reverse order of creation/initialization
+
+	//remove the rigidbodies from the dynamics world and delete them
+	int i;
+	for (i = m_dynamicsWorld->getNumCollisionObjects() - 1; i >= 0; i--)
+	{
+		btCollisionObject* obj = m_dynamicsWorld->getCollisionObjectArray()[i];
+		btRigidBody* body = btRigidBody::upcast(obj);
+		if (body && body->getMotionState())
+		{
+			delete body->getMotionState();
+		}
+		m_dynamicsWorld->removeCollisionObject(obj);
+		delete obj;
+	}
+
+	//delete collision shapes
+	for (int j = 0; j < m_collisionShapes.size(); j++)
+	{
+		btCollisionShape* shape = m_collisionShapes[j];
+		m_collisionShapes[j] = 0;
+		delete shape;
+	}
+
+	//delete dynamics world
+	delete m_dynamicsWorld;
+	m_dynamicsWorld = 0;
+
+	//delete solver
+	delete m_solver;
+
+	//delete broadphase
+	delete m_broadphase;
+
+	//delete dispatcher
+	delete m_dispatcher;
+
+	delete m_collisionConfiguration;
+}
+#endif
 
 CommonExampleInterface* App_GripperClothCreateFunc(CommonExampleOptions& options)
 {

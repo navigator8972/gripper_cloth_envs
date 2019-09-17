@@ -25,6 +25,7 @@ CommonExampleInterface* example;
 SimpleOpenGL3App* app = NULL;
 
 int gSharedMemoryKey = -1;
+bool gRunSimulation = false;
 
 b3MouseMoveCallback prevMouseMoveCallback = 0;
 static void OnMouseMove(float x, float y)
@@ -57,10 +58,18 @@ static void OnKeyboardPressed(int key, int state)
 	{
 		return;
 	}
-	switch(key)
+	// printf("%d, %d\n", key, state);
+	if(state)
 	{
-		case B3G_ESCAPE: app->m_window->setRequestExit();break;
+		//only handle events triggered by pushing down the button
+		switch(key)
+		{
+			case B3G_ESCAPE: app->m_window->setRequestExit();break;
+
+			case B3G_SPACE: gRunSimulation = !gRunSimulation;break;
+		}
 	}
+	
 
 	return;
 }
@@ -115,7 +124,10 @@ int main(int argc, char* argv[])
 		if (dtSec < 0.1)
 			dtSec = 0.1;
 
-		example->stepSimulation(dtSec);
+		if(gRunSimulation)
+		{
+			example->stepSimulation(dtSec);
+		}
 		clock.reset();
 
 		example->renderScene();
