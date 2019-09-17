@@ -13,135 +13,12 @@ subject to the following restrictions:
 3. This notice may not be removed or altered from any source distribution.
 */
 
+
 #include "App_GripperCloth.h"
 
-#include "btBulletDynamicsCommon.h"
-
-//apparently, bullet is transiting its soft simulation from SoftBody to DeformableBody
-//see the two words below. There is a small paragraph of comments in btDeformableMultiBodyDynamicsWorld stating the algorithm routine
-//looks like the new one is more about conjugate-projection to deal with contact and use explicit internal forces, supporting corotational and neo-hookean.
-//will PBD be eventually deprecated in Bullet?. I found the current DeformableBody is not stable, at least for clothing behaviors
-#include "BulletSoftBody/btSoftRigidDynamicsWorld.h"
-#include "BulletSoftBody/btDeformableMultiBodyDynamicsWorld.h"
-
-//from DeformableDemo
-#include "BulletSoftBody/btSoftBody.h"
-#include "BulletSoftBody/btSoftBodyHelpers.h"
-#include "BulletSoftBody/btDeformableBodySolver.h"
-
-//from DeformableDemo
-#include "BulletSoftBody/btSoftBodyRigidBodyCollisionConfiguration.h"
-#include "BulletDynamics/Featherstone/btMultiBodyConstraintSolver.h"
-#include "BulletDynamics/Featherstone/btMultiBodyJointMotor.h"
-
-//from SoftDemo
-#include "BulletSoftBody/btSoftSoftCollisionAlgorithm.h"
-
-//from DeformableDemo
-#include "LinearMath/btVector3.h"
-#include "LinearMath/btAlignedObjectArray.h"
-
-#include "CommonInterfaces/CommonRigidBodyBase.h"
-
-// #define USE_DEFORMABLE_BODY
 
 const btScalar PI(3.1415926535897932384626433832795028841972);
 
-class btSoftRididCollisionAlgorithm;
-
-struct App_GripperCloth : public CommonRigidBodyBase
-{
-	App_GripperCloth(struct GUIHelperInterface* helper)
-		: CommonRigidBodyBase(helper)
-	{
-	}
-	virtual ~App_GripperCloth() {}
-	virtual void initPhysics();
-#ifndef USE_DEFORMABLE_BODY	
-	void exitPhysics();
-#endif
-
-	void resetCamera()
-	{
-		float dist = 4;
-		float pitch = -35;
-		float yaw = 52;
-		float targetPos[3] = {0, 0, 0};
-		m_guiHelper->resetCamera(dist, yaw, pitch, targetPos[0], targetPos[1], targetPos[2]);
-	}
-
-	//these are from soft demo, look different from DeformableDemo, what are the differences?
-	btAlignedObjectArray<btSoftSoftCollisionAlgorithm*> m_SoftSoftCollisionAlgorithms;
-
-	btAlignedObjectArray<btSoftRididCollisionAlgorithm*> m_SoftRigidCollisionAlgorithms;
-
-	btSoftBodyWorldInfo m_softBodyWorldInfo;
-
-	btConstraintSolver* m_solver;
-
-	btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
-
-	//it is a bit messy to keep both soft and deformable worlds, try to condition the compilation later
-#ifdef USE_DEFORMABLE_BODY
-	virtual const btDeformableMultiBodyDynamicsWorld* getDeformableDynamicsWorld() const
-    {
-        return (btDeformableMultiBodyDynamicsWorld*)m_dynamicsWorld;
-    }
-    
-    virtual btDeformableMultiBodyDynamicsWorld* getDeformableDynamicsWorld()
-    {
-        return (btDeformableMultiBodyDynamicsWorld*)m_dynamicsWorld;
-    }
-
-	virtual void renderScene()
-    {
-        CommonRigidBodyBase::renderScene();
-        btDeformableMultiBodyDynamicsWorld* deformableWorld = getDeformableDynamicsWorld();
-        
-        for (int i = 0; i < deformableWorld->getSoftBodyArray().size(); i++)
-        {
-            btSoftBody* psb = (btSoftBody*)deformableWorld->getSoftBodyArray()[i];
-            {
-                btSoftBodyHelpers::DrawFrame(psb, deformableWorld->getDebugDrawer());
-                btSoftBodyHelpers::Draw(psb, deformableWorld->getDebugDrawer(), deformableWorld->getDrawFlags());
-            }
-        }
-    }
-	
-#else
-	virtual const btSoftRigidDynamicsWorld* getSoftDynamicsWorld() const
-	{
-		///just make it a btSoftRigidDynamicsWorld please
-		///or we will add type checking
-		return (btSoftRigidDynamicsWorld*)m_dynamicsWorld;
-	}
-
-	virtual btSoftRigidDynamicsWorld* getSoftDynamicsWorld()
-	{
-		///just make it a btSoftRigidDynamicsWorld please
-		///or we will add type checking
-		return (btSoftRigidDynamicsWorld*)m_dynamicsWorld;
-	}
-
-	virtual void renderScene()
-	{
-		CommonRigidBodyBase::renderScene();
-		btSoftRigidDynamicsWorld* softWorld = getSoftDynamicsWorld();
-
-		for (int i = 0; i < softWorld->getSoftBodyArray().size(); i++)
-		{
-			btSoftBody* psb = (btSoftBody*)softWorld->getSoftBodyArray()[i];
-			//if (softWorld->getDebugDrawer() && !(softWorld->getDebugDrawer()->getDebugMode() & (btIDebugDraw::DBG_DrawWireframe)))
-			{
-				btSoftBodyHelpers::DrawFrame(psb, softWorld->getDebugDrawer());
-				btSoftBodyHelpers::Draw(psb, softWorld->getDebugDrawer(), softWorld->getDrawFlags());
-			}
-		}
-	}
-#endif
-
-
-};
 
 void App_GripperCloth::initPhysics()
 {
@@ -217,11 +94,12 @@ void App_GripperCloth::initPhysics()
 		btCapsuleShape* stickShape = new btCapsuleShape(0.02, 1);
 		// stickShape->setMargin(0.05);
 
-		btTransform initTransform(btQuaternion(btVector3(btScalar(1.0f), 0, 0), btScalar(PI/2)), btVector3(0.0, 0.5f, 0.0));
+		btTransform initTransform(btQuaternion(btVector3(0, 0, btScalar(1.0f)), btScalar(PI/2)), btVector3(0.0, 0.5f, 0.0));
+
 
 		btScalar mass(0.);
 
-		btRigidBody* stickBody = createRigidBody(mass, initTransform, stickShape);
+		btRigidBody* stickBody = createRigidBody(mass, initTransform, stickShape, btVector4(0, 0, 0, 1));
 		stickBody->setFriction(0.8f);
 	}
 
@@ -297,6 +175,69 @@ void App_GripperCloth::initPhysics()
 #endif
    }
 
+
+   //create a gripper
+   	{
+		btBoxShape* gripperBasisShape = createBoxShape(btVector3(0.05f, 0.01f, 0.1f));
+		btTransform gripperBasisTransform;
+		gripperBasisTransform.setIdentity();
+		gripperBasisTransform.setOrigin(btVector3(0.0, 0.05f, 0.0f));
+		m_collisionShapes.push_back(gripperBasisShape);
+
+		btScalar mass(0.);
+		m_gripperBase = createRigidBody(mass, gripperBasisTransform, gripperBasisShape, btVector4(0, 0, 1, 1));
+
+		btBoxShape* gripperFinger1Shape = createBoxShape(btVector3(0.05f, 0.1f, 0.02f));
+		m_collisionShapes.push_back(gripperFinger1Shape);
+		btRigidBody* finger1 = createRigidBody(0.5, gripperBasisTransform*btTransform(btQuaternion::getIdentity(), btVector3(0.0f, 0.11f, -0.08f)), gripperFinger1Shape, btVector4(0, 0, 1, 1));
+
+		btBoxShape* gripperFinger2Shape = createBoxShape(btVector3(0.05f, 0.1f, 0.02f));
+		m_collisionShapes.push_back(gripperFinger2Shape);
+		btRigidBody* finger2 = createRigidBody(0.5, gripperBasisTransform*btTransform(btQuaternion::getIdentity(), btVector3(0.0f, 0.11f, 0.08f)), gripperFinger2Shape, btVector4(0, 0, 1, 1));
+
+	   	//similar to PhysX
+	   	m_gripperJoint1 = new btSliderConstraint(*m_gripperBase, *finger1, 
+			btTransform(btQuaternion(btVector3(0, btScalar(1.0f), 0), btScalar(PI/2)), btVector3(0.0f, 0.01f, -0.08f)), 
+		   	btTransform(btQuaternion(btVector3(0, btScalar(1.0f), 0), btScalar(PI/2)), btVector3(0.0f, -0.1f, 0.0f)), true);
+		m_gripperJoint2 = new btSliderConstraint(*m_gripperBase, *finger2, 
+			btTransform(btQuaternion(btVector3(0, btScalar(1.0f), 0), btScalar(PI/2)), btVector3(0.0f, 0.01f, 0.08f)), 
+		   	btTransform(btQuaternion(btVector3(0, btScalar(1.0f), 0), btScalar(PI/2)), btVector3(0.0f, -0.1f, 0.0f)), true);
+
+		m_gripperJoint1->setDbgDrawSize(btScalar(5.f));
+		m_gripperJoint2->setDbgDrawSize(btScalar(5.f));
+
+		m_gripperJoint1->setPoweredLinMotor(true);
+		m_gripperJoint2->setPoweredLinMotor(true);
+
+		// m_gripperJoint1->setTargetLinMotorVelocity(5);
+		// m_gripperJoint2->setTargetLinMotorVelocity(5);
+
+		//these limits are required to make setTargetLinMotorVelocity work
+		m_gripperJoint1->setLowerLinLimit(-0.05f);
+		m_gripperJoint1->setUpperLinLimit(0);
+		m_gripperJoint1->setLowerAngLimit(0.0f);
+		m_gripperJoint1->setUpperAngLimit(0.0f);
+		m_gripperJoint1->setMaxLinMotorForce(4000.0f);
+
+
+		m_gripperJoint2->setLowerLinLimit(0);
+		m_gripperJoint2->setUpperLinLimit(0.05f);
+		m_gripperJoint2->setLowerAngLimit(0.0f);
+		m_gripperJoint2->setUpperAngLimit(0.0f);
+		m_gripperJoint2->setMaxLinMotorForce(4000.0f);
+
+		
+
+		
+#ifdef USE_DEFORMABLE_BODY
+		getDeformableDynamicsWorld()->addConstraint(m_gripperJoint1);
+		getDeformableDynamicsWorld()->addConstraint(m_gripperJoint2);
+#else
+		getSoftDynamicsWorld()->addConstraint(m_gripperJoint1);
+		getSoftDynamicsWorld()->addConstraint(m_gripperJoint2);
+#endif
+	}
+
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
@@ -342,7 +283,26 @@ void App_GripperCloth::exitPhysics()
 
 	delete m_collisionConfiguration;
 }
+#else
+
 #endif
+
+void App_GripperCloth::stepSimulation(float deltaTime)
+{
+	if (m_dynamicsWorld)
+	{
+		//set gripper velocity
+		btTransform curr_pose = m_gripperBase->getCenterOfMassTransform();
+		curr_pose.setOrigin(curr_pose.getOrigin()+m_gripperVelocity);
+		m_gripperBase->setCenterOfMassTransform(curr_pose);
+
+		m_gripperJoint1->setTargetLinMotorVelocity(m_gripperFingerVelocity);
+		m_gripperJoint2->setTargetLinMotorVelocity(-m_gripperFingerVelocity);
+
+		m_dynamicsWorld->stepSimulation(deltaTime);
+	}
+}
+
 
 CommonExampleInterface* App_GripperClothCreateFunc(CommonExampleOptions& options)
 {

@@ -21,6 +21,9 @@ subject to the following restrictions:
 #include <stdio.h>
 #include "ExampleBrowser/OpenGLGuiHelper.h"
 
+#include "LinearMath/btTransform.h"
+#include "App_GripperCloth.h"
+
 CommonExampleInterface* example;
 SimpleOpenGL3App* app = NULL;
 
@@ -54,10 +57,13 @@ static void OnMouseDown(int button, int state, float x, float y)
 
 static void OnKeyboardPressed(int key, int state)
 {	
-	if(app == NULL)
+	if(app == NULL || example == NULL)
 	{
 		return;
 	}
+
+	//process events for buttons pressed...
+
 	// printf("%d, %d\n", key, state);
 	if(state)
 	{
@@ -67,8 +73,52 @@ static void OnKeyboardPressed(int key, int state)
 			case B3G_ESCAPE: app->m_window->setRequestExit();break;
 
 			case B3G_SPACE: gRunSimulation = !gRunSimulation;break;
+
+			case B3G_LEFT_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0.005f, 0, 0);	break;
+
+			case B3G_RIGHT_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(-0.005f, 0, 0); break;
+			
+			case B3G_UP_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0, 0.005f, 0);	break;
+
+			case B3G_DOWN_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0, -0.005f, 0);	break;
+
+			case 'o':
+			case 'O':
+				((App_GripperCloth*)example)->m_gripperFingerVelocity = 0.05;
+				break;
+
+			case 'p':
+			case 'P':
+				((App_GripperCloth*)example)->m_gripperFingerVelocity = -0.05;
+				break;
+
 		}
 	}
+	else
+	{
+		switch(key)
+		{
+			//remember to clear the velocity command
+			case B3G_LEFT_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0, 0, 0);break;
+
+			case B3G_RIGHT_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0, 0, 0); break;
+
+			case B3G_UP_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0, 0, 0);	break;
+
+			case B3G_DOWN_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0, 0, 0);	break;
+
+			case 'o':
+			case 'O':
+				((App_GripperCloth*)example)->m_gripperFingerVelocity = 0;
+				break;
+
+			case 'p':
+			case 'P':
+				((App_GripperCloth*)example)->m_gripperFingerVelocity = 0;
+				break;
+		}
+	}
+	
 	
 
 	return;
@@ -105,7 +155,7 @@ int main(int argc, char* argv[])
 
 	CommonExampleOptions options(&gui);
 
-	example = StandaloneExampleCreateFunc(options);
+	example = App_GripperClothCreateFunc(options);
 	example->processCommandLineArgs(argc, argv);
 
 	example->initPhysics();
@@ -114,6 +164,7 @@ int main(int argc, char* argv[])
 	b3Clock clock;
 
 	app->m_window->setKeyboardCallback((b3KeyboardCallback)OnKeyboardPressed);
+	// app->m_window->setKeyboardCallback((b3KeyboardCallback)(example->keyboardCallback));
 
 	do
 	{
