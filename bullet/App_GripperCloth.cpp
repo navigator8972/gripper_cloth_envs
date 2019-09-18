@@ -103,7 +103,7 @@ void App_GripperCloth::initPhysics()
 		btScalar mass(0.);
 
 		btRigidBody* stickBody = createRigidBody(mass, initTransform, stickShape, btVector4(0, 0, 0, 1));
-		stickBody->setFriction(0.8f);
+		stickBody->setFriction(0.2f);
 	}
 
 
@@ -137,7 +137,7 @@ void App_GripperCloth::initPhysics()
 		pm->m_kLST = 0.4;
 		pm->m_flags -= btSoftBody::fMaterial::DebugDraw;
 		psb->generateBendingConstraints(2, pm);
-		psb->setTotalMass(0.05);
+		psb->setTotalMass(0.1);
 
 		psb->m_cfg.piterations = 30;
 		psb->m_cfg.citerations = 30;
@@ -153,10 +153,10 @@ void App_GripperCloth::initPhysics()
 		// ;
 #else
 		psb->generateBendingConstraints(2);
-
+		psb->generateClusters(32);
 		psb->setTotalMass(0.1);
-		// psb->setSpringStiffness(10);
-		// psb->setDampingCoefficient(0.3);
+		// psb->setSpringStiffness(100);
+		// psb->setDampingCoefficient(10);
 		psb->m_cfg.kKHR = 1; // collision hardness with kinematic objects
 		psb->m_cfg.kCHR = 1; // collision hardness with rigid body
 		psb->m_cfg.kDF = 2;  //dynamic friction, alleviate drifting on the pole
@@ -168,9 +168,9 @@ void App_GripperCloth::initPhysics()
 
 #ifdef USE_DEFORMABLE_BODY		
 		getDeformableDynamicsWorld()->addSoftBody(psb);
-		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(.05,.04, true);
+		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(.05,.05, true);
 		getDeformableDynamicsWorld()->addForce(psb, mass_spring);
-		btDeformableNeoHookeanForce* neohookean = new btDeformableNeoHookeanForce(5,10);
+		btDeformableNeoHookeanForce* neohookean = new btDeformableNeoHookeanForce(20,10);
 		getDeformableDynamicsWorld()->addForce(psb, neohookean);
 		getDeformableDynamicsWorld()->addForce(psb, new btDeformableGravityForce(gravity));
 #else
@@ -203,8 +203,8 @@ void App_GripperCloth::initPhysics()
 		
 		m_gripperBaseJoint->setLinearLowerLimit(btVector3(-10, -0.02, 0));
 		m_gripperBaseJoint->setLinearUpperLimit(btVector3(10,  0.4, 0));
-		m_gripperBaseJoint->setAngularLowerLimit(btVector3(0, 0, 0));
-		m_gripperBaseJoint->setAngularUpperLimit(btVector3(0, 0, 0));
+		m_gripperBaseJoint->setAngularLowerLimit(btVector3(0, 0, -0.00001));
+		m_gripperBaseJoint->setAngularUpperLimit(btVector3(0, 0, 0.00001));
 		m_gripperBaseJoint->setOverrideNumSolverIterations(30);
 
 		m_gripperBaseJoint->getTranslationalLimitMotor()->m_enableMotor[0] = true;
