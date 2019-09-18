@@ -74,22 +74,22 @@ static void OnKeyboardPressed(int key, int state)
 
 			case B3G_SPACE: gRunSimulation = !gRunSimulation;break;
 
-			case B3G_LEFT_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0.005f, 0, 0);	break;
+			case B3G_LEFT_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(-0.05f, 0, 0);	break;
 
-			case B3G_RIGHT_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(-0.005f, 0, 0); break;
+			case B3G_RIGHT_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0.05f, 0, 0); break;
 			
-			case B3G_UP_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0, 0.005f, 0);	break;
+			case B3G_UP_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0, -0.05f, 0);	break;
 
-			case B3G_DOWN_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0, -0.005f, 0);	break;
+			case B3G_DOWN_ARROW: ((App_GripperCloth*)example)->m_gripperVelocity = btVector3(0, 0.05f, 0);	break;
 
 			case 'o':
 			case 'O':
-				((App_GripperCloth*)example)->m_gripperFingerVelocity = 0.05;
+				((App_GripperCloth*)example)->m_gripperFingerVelocity = btScalar(0.05);
 				break;
 
 			case 'p':
 			case 'P':
-				((App_GripperCloth*)example)->m_gripperFingerVelocity = -0.05;
+				((App_GripperCloth*)example)->m_gripperFingerVelocity = btScalar(-0.05);
 				break;
 
 		}
@@ -109,12 +109,12 @@ static void OnKeyboardPressed(int key, int state)
 
 			case 'o':
 			case 'O':
-				((App_GripperCloth*)example)->m_gripperFingerVelocity = 0;
+				((App_GripperCloth*)example)->m_gripperFingerVelocity = btScalar(0);
 				break;
 
 			case 'p':
 			case 'P':
-				((App_GripperCloth*)example)->m_gripperFingerVelocity = 0;
+				((App_GripperCloth*)example)->m_gripperFingerVelocity = btScalar(0);
 				break;
 		}
 	}

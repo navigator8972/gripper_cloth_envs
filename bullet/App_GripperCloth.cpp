@@ -43,9 +43,8 @@ void App_GripperCloth::initPhysics()
 	m_dynamicsWorld->setGravity(gravity);
 	getDeformableDynamicsWorld()->getWorldInfo().m_gravity = gravity;
 #else
-	btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver();
-
-	m_solver = solver;
+	
+	m_solver  = new btSequentialImpulseConstraintSolver();
 	btSoftBodySolver* softBodySolver = 0;
 
 	btDiscreteDynamicsWorld* world = new btSoftRigidDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration, softBodySolver);
@@ -60,10 +59,14 @@ void App_GripperCloth::initPhysics()
 
 	m_softBodyWorldInfo.m_sparsesdf.Initialize();
 
-	m_collisionConfiguration = new btSoftBodyRigidBodyCollisionConfiguration();
-
-	m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
 	m_softBodyWorldInfo.m_dispatcher = m_dispatcher;
+
+	btVector3 worldAabbMin(-1000, -1000, -1000);
+	btVector3 worldAabbMax(1000, 1000, 1000);
+
+	m_broadphase = new btAxisSweep3(worldAabbMin, worldAabbMax, 32766);
+
+	m_softBodyWorldInfo.m_broadphase = m_broadphase;
 #endif
 
 	
@@ -72,19 +75,18 @@ void App_GripperCloth::initPhysics()
     
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
 
-	///create a few basic rigid bodies
-	btBoxShape* groundShape = createBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
-
-	//groundShape->initializePolyhedralFeatures();
-	//btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),50);
-
-	m_collisionShapes.push_back(groundShape);
-
-	btTransform groundTransform;
-	groundTransform.setIdentity();
-	groundTransform.setOrigin(btVector3(0, -50, 0));
-
 	{
+		///create a few basic rigid bodies
+		btBoxShape* groundShape = createBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
+
+		//groundShape->initializePolyhedralFeatures();
+		//btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),50);
+
+		m_collisionShapes.push_back(groundShape);
+
+		btTransform groundTransform;
+		groundTransform.setIdentity();
+		groundTransform.setOrigin(btVector3(0, -50, 0));
 		btScalar mass(0.);
 		createRigidBody(mass, groundTransform, groundShape, btVector4(0, 0, 1, 1));
 	}
@@ -93,6 +95,7 @@ void App_GripperCloth::initPhysics()
 	{
 		btCapsuleShape* stickShape = new btCapsuleShape(0.02, 1);
 		// stickShape->setMargin(0.05);
+		m_collisionShapes.push_back(stickShape);
 
 		btTransform initTransform(btQuaternion(btVector3(0, 0, btScalar(1.0f)), btScalar(PI/2)), btVector3(0.0, 0.5f, 0.0));
 
@@ -118,7 +121,7 @@ void App_GripperCloth::initPhysics()
 											// 2,2,
 											0, true);
 #else
-		btSoftBody* psb = btSoftBodyHelpers::CreatePatch(getSoftDynamicsWorld()->getWorldInfo(), btVector3(-s, h, -s),
+		btSoftBody* psb = btSoftBodyHelpers::CreatePatch(m_softBodyWorldInfo, btVector3(-s, h, -s),
 											btVector3(+s, h, -s),
 											btVector3(-s, h, +s),
 											btVector3(+s, h, +s),
@@ -184,7 +187,7 @@ void App_GripperCloth::initPhysics()
 		gripperBasisTransform.setOrigin(btVector3(0.0, 0.05f, 0.0f));
 		m_collisionShapes.push_back(gripperBasisShape);
 
-		btScalar mass(0.);
+		btScalar mass(0.5);			//set a dynamic link and motorized it with another constraint
 		m_gripperBase = createRigidBody(mass, gripperBasisTransform, gripperBasisShape, btVector4(0, 0, 1, 1));
 
 		btBoxShape* gripperFinger1Shape = createBoxShape(btVector3(0.05f, 0.1f, 0.02f));
@@ -195,6 +198,29 @@ void App_GripperCloth::initPhysics()
 		m_collisionShapes.push_back(gripperFinger2Shape);
 		btRigidBody* finger2 = createRigidBody(0.5, gripperBasisTransform*btTransform(btQuaternion::getIdentity(), btVector3(0.0f, 0.11f, 0.08f)), gripperFinger2Shape, btVector4(0, 0, 1, 1));
 
+		//constraint to the world, similar to MuJoCo
+		m_gripperBaseJoint = new btGeneric6DofConstraint(*m_gripperBase, gripperBasisTransform, false);
+		
+		m_gripperBaseJoint->setLinearLowerLimit(btVector3(-10, -0.02, 0));
+		m_gripperBaseJoint->setLinearUpperLimit(btVector3(10,  0.4, 0));
+		m_gripperBaseJoint->setAngularLowerLimit(btVector3(0, 0, 0));
+		m_gripperBaseJoint->setAngularUpperLimit(btVector3(0, 0, 0));
+		m_gripperBaseJoint->setOverrideNumSolverIterations(30);
+
+		m_gripperBaseJoint->getTranslationalLimitMotor()->m_enableMotor[0] = true;
+		m_gripperBaseJoint->getTranslationalLimitMotor()->m_enableMotor[1] = true;
+		m_gripperBaseJoint->getTranslationalLimitMotor()->m_enableMotor[3] = true;
+		m_gripperBaseJoint->getTranslationalLimitMotor()->m_maxMotorForce[0] = 4000.0f;
+		m_gripperBaseJoint->getTranslationalLimitMotor()->m_maxMotorForce[1] = 4000.0f;
+		m_gripperBaseJoint->getTranslationalLimitMotor()->m_maxMotorForce[2] = 4000.0f;
+
+		m_gripperBaseJoint->getRotationalLimitMotor(0)->m_enableMotor = true;
+		m_gripperBaseJoint->getRotationalLimitMotor(1)->m_enableMotor = true;
+		m_gripperBaseJoint->getRotationalLimitMotor(2)->m_enableMotor = true;
+		m_gripperBaseJoint->getRotationalLimitMotor(0)->m_maxMotorForce = 4000.0f;
+		m_gripperBaseJoint->getRotationalLimitMotor(1)->m_maxMotorForce = 4000.0f;
+		m_gripperBaseJoint->getRotationalLimitMotor(2)->m_maxMotorForce = 4000.0f;
+
 	   	//similar to PhysX
 	   	m_gripperJoint1 = new btSliderConstraint(*m_gripperBase, *finger1, 
 			btTransform(btQuaternion(btVector3(0, btScalar(1.0f), 0), btScalar(PI/2)), btVector3(0.0f, 0.01f, -0.08f)), 
@@ -203,14 +229,15 @@ void App_GripperCloth::initPhysics()
 			btTransform(btQuaternion(btVector3(0, btScalar(1.0f), 0), btScalar(PI/2)), btVector3(0.0f, 0.01f, 0.08f)), 
 		   	btTransform(btQuaternion(btVector3(0, btScalar(1.0f), 0), btScalar(PI/2)), btVector3(0.0f, -0.1f, 0.0f)), true);
 
+		//useful to make the constraints more stiff, because of PBD?
+		m_gripperJoint1->setOverrideNumSolverIterations(30);
+		m_gripperJoint2->setOverrideNumSolverIterations(30);
+
 		m_gripperJoint1->setDbgDrawSize(btScalar(5.f));
 		m_gripperJoint2->setDbgDrawSize(btScalar(5.f));
 
 		m_gripperJoint1->setPoweredLinMotor(true);
 		m_gripperJoint2->setPoweredLinMotor(true);
-
-		// m_gripperJoint1->setTargetLinMotorVelocity(5);
-		// m_gripperJoint2->setTargetLinMotorVelocity(5);
 
 		//these limits are required to make setTargetLinMotorVelocity work
 		m_gripperJoint1->setLowerLinLimit(-0.05f);
@@ -228,14 +255,20 @@ void App_GripperCloth::initPhysics()
 
 		
 
-		
+		//true to disable link between constrained bodies
 #ifdef USE_DEFORMABLE_BODY
-		getDeformableDynamicsWorld()->addConstraint(m_gripperJoint1);
-		getDeformableDynamicsWorld()->addConstraint(m_gripperJoint2);
+		getDeformableDynamicsWorld()->addConstraint(m_gripperBaseJoint, true);
+		getDeformableDynamicsWorld()->addConstraint(m_gripperJoint1, true);
+		getDeformableDynamicsWorld()->addConstraint(m_gripperJoint2, true);
 #else
-		getSoftDynamicsWorld()->addConstraint(m_gripperJoint1);
-		getSoftDynamicsWorld()->addConstraint(m_gripperJoint2);
+		getSoftDynamicsWorld()->addConstraint(m_gripperBaseJoint, true);
+		getSoftDynamicsWorld()->addConstraint(m_gripperJoint1, true);
+		getSoftDynamicsWorld()->addConstraint(m_gripperJoint2, true);
 #endif
+
+		//initialize velocity
+		m_gripperVelocity = btVector3(0, 0, 0);
+		m_gripperFingerVelocity = 0.0f;
 	}
 
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
@@ -292,9 +325,13 @@ void App_GripperCloth::stepSimulation(float deltaTime)
 	if (m_dynamicsWorld)
 	{
 		//set gripper velocity
-		btTransform curr_pose = m_gripperBase->getCenterOfMassTransform();
-		curr_pose.setOrigin(curr_pose.getOrigin()+m_gripperVelocity);
-		m_gripperBase->setCenterOfMassTransform(curr_pose);
+		// btTransform curr_pose = m_gripperBase->getCenterOfMassTransform();
+		// curr_pose.setOrigin(curr_pose.getOrigin()+m_gripperVelocity);
+		// m_gripperBase->setCenterOfMassTransform(curr_pose);
+		// printf("%f, %f, %f\n", m_gripperVelocity[0], m_gripperVelocity[1], m_gripperVelocity[2]);
+		m_gripperBaseJoint->getTranslationalLimitMotor()->m_targetVelocity[0] = m_gripperVelocity[0];
+		m_gripperBaseJoint->getTranslationalLimitMotor()->m_targetVelocity[1] = m_gripperVelocity[1];
+		m_gripperBaseJoint->getTranslationalLimitMotor()->m_targetVelocity[2] = m_gripperVelocity[2];
 
 		m_gripperJoint1->setTargetLinMotorVelocity(m_gripperFingerVelocity);
 		m_gripperJoint2->setTargetLinMotorVelocity(-m_gripperFingerVelocity);

@@ -84,9 +84,10 @@ struct App_GripperCloth : public CommonRigidBodyBase
 
 	btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
 
-	btRigidBody*        m_gripperBase;
-	btSliderConstraint* m_gripperJoint1;
-	btSliderConstraint* m_gripperJoint2;
+	btRigidBody*                    m_gripperBase;
+    btGeneric6DofConstraint*        m_gripperBaseJoint;
+	btSliderConstraint*             m_gripperJoint1;
+	btSliderConstraint*             m_gripperJoint2;
 
     btVector3   m_gripperVelocity;
     btScalar    m_gripperFingerVelocity;
