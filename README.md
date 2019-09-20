@@ -7,7 +7,7 @@ SOFA/PhysX/MuJoCo/Bullet environments for testing gripper and cloth interaction
 
 To use:
 
-1. Compile SOFA (tested on v19.06);
+1. Compile SOFA (tested on v19.06) and [SoftRobots](https://project.inria.fr/softrobot/) plugin;
 
 2. Move obj files in assets to $SOFA_ROOT_DIR/src/share/mesh/ because the loader seems to always load from there...
 
