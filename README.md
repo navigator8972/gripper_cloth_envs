@@ -59,7 +59,7 @@ To use:
 
 4. make and run ./App_GripperClothGui
 
-5. Use UP/DOWN/LEFT/RIGHT/O/P to move and open/close the gripper.
+5. Press SPACE to run the simulation; use UP/DOWN/LEFT/RIGHT/O/P to move and open/close the gripper.
 
 Note: Many settings seems to be not available in pybullet at the time of testing. The tested commits introduce new ways of simulating soft dynamics as DeformableMultiBody,
 in contrast to original SoftBody. The environment uses a macro USE_DEFORMABLE_BODY in App_GripperCloth.h to disable/enable the old solver.
