@@ -1,6 +1,6 @@
 #export CC=/usr/bin/clang
 #export CXX=/usr/bin/clang++
-export BULLET_PHYSICS_ROOT_DIR=/home/hangyin/workspace/bullet3
+export BULLET_PHYSICS_ROOT_DIR=~/workspace/bullet3
 # export LD_LIBRARY_PATH=$BULLET_PHYSICS_ROOT_DIR/build_cmake/src/Bullet3Common:$LD_LIBRARY_PATH
 # export LD_LIBRARY_PATH=$BULLET_PHYSICS_ROOT_DIR/build_cmake/src/Bullet3Dynamics:$LD_LIBRARY_PATH
 # export LD_LIBRARY_PATH=$BULLET_PHYSICS_ROOT_DIR/build_cmake/src/Bullet3Geometry:$LD_LIBRARY_PATH

@@ -42,6 +42,9 @@ void App_GripperCloth::initPhysics()
 	btVector3 gravity = btVector3(0, -9.81, 0);
 	m_dynamicsWorld->setGravity(gravity);
 	getDeformableDynamicsWorld()->getWorldInfo().m_gravity = gravity;
+	
+	//set to use implicit integration or not. 
+	getDeformableDynamicsWorld()->setImplicit(false);
 #else
 	
 	m_solver  = new btSequentialImpulseConstraintSolver();
