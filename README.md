@@ -31,7 +31,7 @@ To use:
 
 4. make and run ./SnippetGripperCloth
 
-5. Press SPACE to run the simulation; Use J/K/L/I/O/P to move and open/close the gripper.
+5. Press SPACE to run the simulation; use J/K/L/I/O/P to move and open/close the gripper.
 
 
 ### [MuJoCo 2.0.0](http://www.mujoco.org/index.html) and [mujoco_py](https://github.com/openai/mujoco-py)
@@ -51,7 +51,7 @@ Note: the simulation window got stuck if we choose to render cloth texture. Look
 
 To use:
 
-1. Build bullet3; Tested on [commits](https://github.com/bulletphysics/bullet3/commit/25cc1fa386447771e3a19c1470578a995eb06f9e) on Aug 25th, 2019;
+1. Build bullet3; Tested on [commits](https://github.com/bulletphysics/bullet3/commit/ce28bd5369586cfce95885f7f99e421aa2384cd7) on Sep 14th, 2019;
 
 2. Modify the path in env.sh to point to your Bullet SDK folder and source env.sh;
 
