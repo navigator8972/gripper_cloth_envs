@@ -112,7 +112,7 @@ void App_GripperCloth::initPhysics()
 
 	// create a cloth
 	{
-       const btScalar s = 0.25;
+       const btScalar s = 0.2;
        const btScalar h = 0.6;
 
 #ifdef USE_DEFORMABLE_BODY
@@ -133,7 +133,7 @@ void App_GripperCloth::initPhysics()
 											0, true);
 #endif
 
-		psb->getCollisionShape()->setMargin(0.02);
+		psb->getCollisionShape()->setMargin(0.022);
 
 #ifndef USE_DEFORMABLE_BODY
 		btSoftBody::Material* pm = psb->appendMaterial();
@@ -156,14 +156,15 @@ void App_GripperCloth::initPhysics()
 		// ;
 #else
 		psb->generateBendingConstraints(2);
-		psb->generateClusters(32);
+		// psb->generateClusters(32);
 		psb->setTotalMass(0.1);
 		// psb->setSpringStiffness(100);
 		// psb->setDampingCoefficient(10);
 		psb->m_cfg.kKHR = 1; // collision hardness with kinematic objects
 		psb->m_cfg.kCHR = 1; // collision hardness with rigid body
-		psb->m_cfg.kDF = 2;  //dynamic friction, alleviate drifting on the pole
-		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RD + btSoftBody::fCollision::CL_SELF;
+		psb->m_cfg.kDF = 1.5;  //dynamic friction, alleviate drifting on the pole
+		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RD;
+		// psb->m_cfg.collisions |= btSoftBody::fCollision::VF_DD;
 #endif
 
 		
@@ -171,7 +172,7 @@ void App_GripperCloth::initPhysics()
 
 #ifdef USE_DEFORMABLE_BODY		
 		getDeformableDynamicsWorld()->addSoftBody(psb);
-		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(.05,.05, true);
+		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(.1,.05, true);
 		getDeformableDynamicsWorld()->addForce(psb, mass_spring);
 		btDeformableNeoHookeanForce* neohookean = new btDeformableNeoHookeanForce(20,10);
 		getDeformableDynamicsWorld()->addForce(psb, neohookean);
@@ -340,6 +341,9 @@ void App_GripperCloth::stepSimulation(float deltaTime)
 		m_gripperJoint2->setTargetLinMotorVelocity(-m_gripperFingerVelocity);
 
 		m_dynamicsWorld->stepSimulation(deltaTime);
+
+        // float internalTimeStep = 1. / 240.f;
+        // m_dynamicsWorld->stepSimulation(deltaTime, 4, internalTimeStep);
 	}
 }
 

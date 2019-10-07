@@ -149,13 +149,13 @@ def Cloth(parentNode=None, **kwargs):
       selfNode.createObject('CGLinearSolver', threshold='1e-9', tolerance='1e-09', name='linear solver', iterations='20', template='GraphScattered')
       
     # Tshirt model from ARCSim, need to put it to SOFA mesh folder
-    #   selfNode.createObject('MeshObjLoader', name='loader', filename='mesh/tshirt.obj')
-    #   selfNode.createObject('MechanicalObject', src='@loader', scale='1', name='DOF', template='Vec3d', translation='0 0.2 -0.1', rotation='0 0 0')
+      selfNode.createObject('MeshObjLoader', name='loader', filename='mesh/tshirt.obj')
+      selfNode.createObject('MechanicalObject', src='@loader', scale='1', name='DOF', template='Vec3d', translation='0 0.2 -0.1', rotation='0 0 0')
       
       
       #1.5 0 1.1 vs 0 0.05 -0.5
-      selfNode.createObject('MeshGmshLoader', createSubelements='true', name='loader', filename='mesh/square3.msh')
-      selfNode.createObject('MechanicalObject', src='@loader', scale='1', name='DOF', template='Vec3d', translation='-0.5 0.05 -0.5', rotation='90 0 0')
+    #   selfNode.createObject('MeshGmshLoader', createSubelements='true', name='loader', filename='mesh/square3.msh')
+    #   selfNode.createObject('MechanicalObject', src='@loader', scale='1', name='DOF', template='Vec3d', translation='-0.5 0.05 -0.5', rotation='90 0 0')
       selfNode.createObject('MinProximityIntersection', contactDistance='0.1', alarmDistance='0.2')
       selfNode.createObject('UniformMass', vertexMass='0.01', name='Mass', template='Vec3d')
       selfNode.createObject('TriangleSetTopologyContainer', src='@loader', name='Topology Container')
