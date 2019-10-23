@@ -60,35 +60,51 @@ class MyHumanoid(MJCFBasedRobot):
             self._p.removeConstraint(self.fixConstraintId)
         return
 
+def attachToCloth(bulletClient, rigidId, clothId, clothMeshIdx=-1):
+    #create a constraint to connect a rigid obj and cloth mesh point
+    constraintId = bulletClient.createConstraint(rigidId, -1, clothId, clothMeshIdx, p.JOINT_POINT2POINT, 
+                jointAxis=[0,0,1], parentFramePosition=[0,0,0],
+                childFramePosition=[0,0,0],
+                parentFrameOrientation=[1,0,0,0],
+                childFrameOrientation=[1,0,0,0])
+    return constraintId
+
+def releaseCloth(bulletClient, constraintId):
+    bulletClient.removeConstraint(constraintId)
+    return
 
 def main():
     physicsClient = p.connect(p.GUI)
-
 
     p.setGravity(0, 0, -10)
 
     #data path to search object meshes
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-    # franka = p.loadURDF(fileName=os.path.join(assets_path, 'franka/robots/panda_arm_hand_mrp.urdf'), basePosition=[0, 0, 0], useFixedBase=True, useMaximalCoordinates=True)
     plane = p.loadURDF("plane.urdf")
-    # cloth = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt.obj'), basePosition=[-0.5, -0.5, 1.2], scale=1)
 
-    cloth = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt.obj'), basePosition=[0, 0, 1.3], baseOrientation=[ 0, 0, 0.7071068, 0.7071068 ], scale=1, 
-        collisionMargin=0.05, springElasticStiffness=1, springDampingStiffness=0.1)
+    cloth = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt.obj'), basePosition=[0, 0, 1.35], baseOrientation=[ 0, 0, 0.7071068, 0.7071068 ], scale=.9, 
+        collisionMargin=0.05, springElasticStiffness=2, springDampingStiffness=0.2)
     cloth_mesh = p.getMeshData(cloth)
+    # print(cloth_mesh[0], len(cloth_mesh[1]))
 
-    
     humanoid = MyHumanoid(p)
     humanoid.fixBase()
+
+    attachConstraints = []
 
  
     runSimulation = False
     useRealTimeSimulation = 0
 
-    # cubeId = p.loadURDF("cube_small.urdf", 0, 0, 1)
-    # cid = p.createConstraint(cubeId, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [0, 0, 1])
+    # cubeId = p.loadURDF("cube_small.urdf", [-0.1, 0.1, 1.6], [1, 0, 0, 0], True, True)   #note giving 0, 0, True doesnt make it created as rigidbody!!!
 
+    # fix to background only works for multibody, so far rigid body must specify a child one for creating constraint
+    # lets load it with a static base...
+    # cid = p.createConstraint(cubeId, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [-0.1, 0.1, 1.6])
+    # constraint = attachToCloth(p, cubeId, cloth, 0)
+    
+    # attachConstraints.append(constraint)
 
     if (useRealTimeSimulation):
         p.setRealTimeSimulation(1)
