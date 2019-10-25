@@ -84,7 +84,7 @@ def main():
     plane = p.loadURDF("plane.urdf")
 
     cloth = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt.obj'), basePosition=[0, 0, 1.35], baseOrientation=[ 0, 0, 0.7071068, 0.7071068 ], scale=.9, 
-        collisionMargin=0.05, springElasticStiffness=2, springDampingStiffness=0.2)
+        collisionMargin=0.05, springElasticStiffness=8, springDampingStiffness=0.2)
     cloth_mesh = p.getMeshData(cloth)
     # print(cloth_mesh[0], len(cloth_mesh[1]))
 
@@ -97,12 +97,16 @@ def main():
     runSimulation = False
     useRealTimeSimulation = 0
 
-    # cubeId = p.loadURDF("cube_small.urdf", [-0.1, 0.1, 1.6], [1, 0, 0, 0], True, True)   #note giving 0, 0, True doesnt make it created as rigidbody!!!
+    #cubeId = p.loadURDF("cube_small.urdf", [-0.1, 0.1, 1.6], [1, 0, 0, 0], True, True)
 
     # fix to background only works for multibody, so far rigid body must specify a child one for creating constraint
     # lets load it with a static base...
     # cid = p.createConstraint(cubeId, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [-0.1, 0.1, 1.6])
-    # constraint = attachToCloth(p, cubeId, cloth, 0)
+
+    # cube1Id = p.loadURDF("cube_small.urdf", [-0.1, 0.1, 1.2], [1, 0, 0, 0], True, True, globalScaling=1)   #note giving 0, 0, True doesnt make it created as rigidbody!!!
+    # cube2Id = p.loadURDF("cube_small.urdf", [-0.1, -0.1, 1.2], [1, 0, 0, 0], True, True, globalScaling=1)
+    # constraint = attachToCloth(p, cube1Id, cloth, 0)
+    # constraint = attachToCloth(p, cube2Id, cloth, 33)
     
     # attachConstraints.append(constraint)
 
