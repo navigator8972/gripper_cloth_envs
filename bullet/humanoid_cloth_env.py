@@ -85,11 +85,13 @@ def main():
 
     cloth = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt.obj'), basePosition=[0, 0, 1.35], baseOrientation=[ 0, 0, 0.7071068, 0.7071068 ], scale=.9, 
         collisionMargin=0.05, springElasticStiffness=8, springDampingStiffness=0.2)
+    # cloth = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt_mia.obj'), basePosition=[0, 0, 0.5], baseOrientation=[ 0.5, 0.5, 0.5, 0.5 ], scale=.35, 
+    #     collisionMargin=0.05, springElasticStiffness=10, springDampingStiffness=0.2)
     cloth_mesh = p.getMeshData(cloth)
     # print(cloth_mesh[0], len(cloth_mesh[1]))
 
-    humanoid = MyHumanoid(p)
-    humanoid.fixBase()
+    # humanoid = MyHumanoid(p)
+    # humanoid.fixBase()
 
     attachConstraints = []
 
@@ -106,7 +108,7 @@ def main():
     # cube1Id = p.loadURDF("cube_small.urdf", [-0.1, 0.1, 1.2], [1, 0, 0, 0], True, True, globalScaling=1)   #note giving 0, 0, True doesnt make it created as rigidbody!!!
     # cube2Id = p.loadURDF("cube_small.urdf", [-0.1, -0.1, 1.2], [1, 0, 0, 0], True, True, globalScaling=1)
     # constraint = attachToCloth(p, cube1Id, cloth, 0)
-    # constraint = attachToCloth(p, cube2Id, cloth, 33)
+    # constraint = attachToCloth(p, cube2Id, cloth, 214)
     
     # attachConstraints.append(constraint)
 
