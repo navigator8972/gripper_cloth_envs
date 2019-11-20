@@ -164,7 +164,7 @@ void App_GripperCloth::initPhysics()
 		psb->m_cfg.kCHR = 1; // collision hardness with rigid body
 		psb->m_cfg.kDF = 1.5;  //dynamic friction, alleviate drifting on the pole
 		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RD;
-		// psb->m_cfg.collisions |= btSoftBody::fCollision::VF_DD;
+		psb->m_cfg.collisions |= btSoftBody::fCollision::VF_DD;
 
 		//disable deactivation
 		psb->setActivationState(DISABLE_DEACTIVATION);
