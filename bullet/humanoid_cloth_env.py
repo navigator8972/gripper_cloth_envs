@@ -104,7 +104,7 @@ def main():
             runSimulation = not runSimulation
         if runSimulation:
             p.stepSimulation()
-        p.setGravity(0,0,-10)
+        # p.setGravity(0,0,-10)
         # sleep(1./240.)
 
     return
