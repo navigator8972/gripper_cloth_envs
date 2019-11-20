@@ -60,64 +60,43 @@ class MyHumanoid(MJCFBasedRobot):
             self._p.removeConstraint(self.fixConstraintId)
         return
 
-def attachToCloth(bulletClient, rigidId, clothId, clothMeshIdx=-1):
-    #create a constraint to connect a rigid obj and cloth mesh point
-    constraintId = bulletClient.createConstraint(rigidId, -1, clothId, clothMeshIdx, p.JOINT_POINT2POINT, 
-                jointAxis=[0,0,1], parentFramePosition=[0,0,0],
-                childFramePosition=[0,0,0],
-                parentFrameOrientation=[1,0,0,0],
-                childFrameOrientation=[1,0,0,0])
-    return constraintId
 
-def releaseCloth(bulletClient, constraintId):
-    bulletClient.removeConstraint(constraintId)
-    return
 
 def main():
     physicsClient = p.connect(p.GUI)
+    p.resetSimulation(p.RESET_USE_DEFORMABLE_WORLD)
 
     p.setGravity(0, 0, -10)
 
     #data path to search object meshes
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
 
-    plane = p.loadURDF("plane.urdf")
+    planeId = p.loadURDF("plane.urdf")
 
-    cloth = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt.obj'), basePosition=[0, 0, 1.35], baseOrientation=[ 0, 0, 0.7071068, 0.7071068 ], scale=.9, 
-        collisionMargin=0.05, springElasticStiffness=8, springDampingStiffness=0.2)
-    # cloth = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt_mia.obj'), basePosition=[0, 0, 0.5], baseOrientation=[ 0.5, 0.5, 0.5, 0.5 ], scale=.35, 
-    #     collisionMargin=0.05, springElasticStiffness=10, springDampingStiffness=0.2)
-    cloth_mesh = p.getMeshData(cloth)
+    # clothId = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt.obj'), basePosition=[0, 0, 1.35], baseOrientation=[ 0, 0, 0.7071068, 0.7071068 ], scale=.9, 
+    #     collisionMargin=0.05, useMassSpring=1, mass=1, springElasticStiffness=8, springDampingStiffness=0.2, useBendingSprings=1)
+    clothId = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt_mia.obj'), basePosition=[0.02, 0, -0.05], baseOrientation=[ 0.5, 0.5, 0.5, 0.5 ], scale=.35, 
+        collisionMargin=0.05, useMassSpring=1, mass=1, springElasticStiffness=8, springDampingStiffness=0.2, useBendingSprings=1)
+    # cloth_mesh = p.getMeshData(clothId)
     # print(cloth_mesh[0], len(cloth_mesh[1]))
 
     # humanoid = MyHumanoid(p)
     # humanoid.fixBase()
 
-    attachConstraints = []
-
  
     runSimulation = False
     useRealTimeSimulation = 0
 
-    #cubeId = p.loadURDF("cube_small.urdf", [-0.1, 0.1, 1.6], [1, 0, 0, 0], True, True)
+    cubeId = p.loadURDF("cube_small.urdf", [0.1, 0.05, 1.6], [1, 0, 0, 0], True, True)
 
-    # fix to background only works for multibody, so far rigid body must specify a child one for creating constraint
-    # lets load it with a static base...
-    # cid = p.createConstraint(cubeId, -1, -1, -1, p.JOINT_FIXED, [0, 0, 0], [0, 0, 0], [-0.1, 0.1, 1.6])
+    #use official anchor feature for deformable body
+    p.createSoftBodyAnchor(clothId ,3,cubeId,-1, [0.5,-0.5,0])
 
-    # cube1Id = p.loadURDF("cube_small.urdf", [-0.1, 0.1, 1.2], [1, 0, 0, 0], True, True, globalScaling=1)   #note giving 0, 0, True doesnt make it created as rigidbody!!!
-    # cube2Id = p.loadURDF("cube_small.urdf", [-0.1, -0.1, 1.2], [1, 0, 0, 0], True, True, globalScaling=1)
-    # constraint = attachToCloth(p, cube1Id, cloth, 0)
-    # constraint = attachToCloth(p, cube2Id, cloth, 214)
-    
-    # attachConstraints.append(constraint)
 
-    if (useRealTimeSimulation):
-        p.setRealTimeSimulation(1)
+    # p.setRealTimeSimulation(1)
 
     while p.isConnected():
         
-
         keys = p.getKeyboardEvents()
         if ord('q') in keys and keys[ord('q')]&p.KEY_WAS_TRIGGERED:
             break
@@ -125,7 +104,9 @@ def main():
             runSimulation = not runSimulation
         if runSimulation:
             p.stepSimulation()
-    # p.removeConstraint(cid)
+        p.setGravity(0,0,-10)
+        # sleep(1./240.)
+
     return
 
 if __name__ == "__main__":

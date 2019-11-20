@@ -51,7 +51,7 @@ Note: the simulation window got stuck if we choose to render cloth texture. Look
 
 To use:
 
-1. Build bullet3; Tested on [commits](https://github.com/bulletphysics/bullet3/commit/3d87fb3b84eb9faed580ef7b69bb4cb9cb693907) on Oct 2nd, 2019;
+1. Build bullet3; Tested on [commits](https://github.com/bulletphysics/bullet3/commit/49cf4dfc568871f73f760e9ee054785f98e0f464) on Nov 20th, 2019;
 
 2. Modify the path in env.sh to point to your Bullet SDK folder and source env.sh;
 
@@ -61,10 +61,11 @@ To use:
 
 5. Press SPACE to run the simulation; use UP/DOWN/LEFT/RIGHT/O/P to move and open/close the gripper.
 
-Note: Many settings seems to be not available in pybullet at the time of testing. The tested commits introduce new ways of simulating soft dynamics as DeformableMultiBody,
+Note: The tested commits introduce new ways of simulating soft dynamics as DeformableMultiBody,
 in contrast to original SoftBody. The environment uses a macro USE_DEFORMABLE_BODY in App_GripperCloth.h to disable/enable the old solver.
 The cloth seems more damped for SoftBody while the actuation of the gripper mysteriously breaks after about 2-3 seconds of simulation. Need to look into it
 if that is the engine we would like go with.
+Update on Nov 20th, 2019: Environment with DeformableBody also freezes after around 50s. Should be a bug of the new feautre.
 
 
 
