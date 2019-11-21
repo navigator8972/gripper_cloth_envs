@@ -28,9 +28,10 @@ void App_GripperCloth::initPhysics()
 
 	m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
 
-	m_broadphase = new btDbvtBroadphase();
 
 #ifdef USE_DEFORMABLE_BODY
+	m_broadphase = new btDbvtBroadphase();
+
     btDeformableBodySolver* deformableBodySolver = new btDeformableBodySolver();
 
 	btDeformableMultiBodyConstraintSolver* sol = new btDeformableMultiBodyConstraintSolver();
@@ -46,6 +47,13 @@ void App_GripperCloth::initPhysics()
 	//set to use implicit integration or not. 
 	getDeformableDynamicsWorld()->setImplicit(false);
 #else
+
+	btVector3 worldAabbMin(-1000, -1000, -1000);
+	btVector3 worldAabbMax(1000, 1000, 1000);
+
+	m_broadphase = new btAxisSweep3(worldAabbMin, worldAabbMax, 32766);
+
+	m_softBodyWorldInfo.m_broadphase = m_broadphase;
 	
 	m_solver  = new btSequentialImpulseConstraintSolver();
 	btSoftBodySolver* softBodySolver = 0;
@@ -64,12 +72,6 @@ void App_GripperCloth::initPhysics()
 
 	m_softBodyWorldInfo.m_dispatcher = m_dispatcher;
 
-	btVector3 worldAabbMin(-1000, -1000, -1000);
-	btVector3 worldAabbMax(1000, 1000, 1000);
-
-	m_broadphase = new btAxisSweep3(worldAabbMin, worldAabbMax, 32766);
-
-	m_softBodyWorldInfo.m_broadphase = m_broadphase;
 #endif
 
 	
@@ -148,7 +150,7 @@ void App_GripperCloth::initPhysics()
 
 		//dynamic friction, alleviate drifting on the pole
 		psb->m_cfg.kDF = 2;
-		psb->generateClusters(32);
+		// psb->generateClusters(32);
 		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RS;
 		psb->m_cfg.collisions |= btSoftBody::fCollision::CL_SELF;
 		// psb->m_cfg.collisions = btSoftBody::fCollision::CL_SS + btSoftBody::fCollision::CL_RS
@@ -167,7 +169,7 @@ void App_GripperCloth::initPhysics()
 		psb->m_cfg.collisions |= btSoftBody::fCollision::VF_DD;
 
 		//disable deactivation
-		psb->setActivationState(DISABLE_DEACTIVATION);
+		// psb->setActivationState(DISABLE_DEACTIVATION);
 #endif
 
 		
@@ -195,15 +197,21 @@ void App_GripperCloth::initPhysics()
 		m_collisionShapes.push_back(gripperBasisShape);
 
 		btScalar mass(0.5);			//set a dynamic link and motorized it with another constraint
-		m_gripperBase = createRigidBody(mass, gripperBasisTransform, gripperBasisShape, btVector4(0, 0, 1, 1));
+		btRigidBody* m_gripperBase = createRigidBody(mass, gripperBasisTransform, gripperBasisShape, btVector4(0, 0, 1, 1));
+		
 
 		btBoxShape* gripperFinger1Shape = createBoxShape(btVector3(0.05f, 0.1f, 0.02f));
 		m_collisionShapes.push_back(gripperFinger1Shape);
 		btRigidBody* finger1 = createRigidBody(0.5, gripperBasisTransform*btTransform(btQuaternion::getIdentity(), btVector3(0.0f, 0.11f, -0.08f)), gripperFinger1Shape, btVector4(0, 0, 1, 1));
+		
 
 		btBoxShape* gripperFinger2Shape = createBoxShape(btVector3(0.05f, 0.1f, 0.02f));
 		m_collisionShapes.push_back(gripperFinger2Shape);
 		btRigidBody* finger2 = createRigidBody(0.5, gripperBasisTransform*btTransform(btQuaternion::getIdentity(), btVector3(0.0f, 0.11f, 0.08f)), gripperFinger2Shape, btVector4(0, 0, 1, 1));
+		
+		m_gripperBase->setActivationState(DISABLE_DEACTIVATION);
+		finger1->setActivationState(DISABLE_DEACTIVATION);
+		finger2->setActivationState(DISABLE_DEACTIVATION);
 
 		//constraint to the world, similar to MuJoCo
 		m_gripperBaseJoint = new btGeneric6DofConstraint(*m_gripperBase, gripperBasisTransform, false);
@@ -335,16 +343,16 @@ void App_GripperCloth::stepSimulation(float deltaTime)
 		// btTransform curr_pose = m_gripperBase->getCenterOfMassTransform();
 		// curr_pose.setOrigin(curr_pose.getOrigin()+m_gripperVelocity);
 		// m_gripperBase->setCenterOfMassTransform(curr_pose);
-		// printf("%f, %f, %f\n", m_gripperVelocity[0], m_gripperVelocity[1], m_gripperVelocity[2]);
+		// printf("Setting gripper velocity: %f, %f, %f\n", m_gripperVelocity[0], m_gripperVelocity[1], m_gripperVelocity[2]);
 		m_gripperBaseJoint->getTranslationalLimitMotor()->m_targetVelocity[0] = m_gripperVelocity[0];
 		m_gripperBaseJoint->getTranslationalLimitMotor()->m_targetVelocity[1] = m_gripperVelocity[1];
 		m_gripperBaseJoint->getTranslationalLimitMotor()->m_targetVelocity[2] = m_gripperVelocity[2];
 
 		m_gripperJoint1->setTargetLinMotorVelocity(m_gripperFingerVelocity);
 		m_gripperJoint2->setTargetLinMotorVelocity(-m_gripperFingerVelocity);
-
+		
 		m_dynamicsWorld->stepSimulation(deltaTime);
-
+		
         // float internalTimeStep = 1. / 240.f;
         // m_dynamicsWorld->stepSimulation(deltaTime, 4, internalTimeStep);
 	}
