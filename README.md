@@ -63,8 +63,7 @@ To use:
 
 Note: The tested commits introduce new ways of simulating soft dynamics as DeformableMultiBody,
 in contrast to original SoftBody. The environment uses a macro USE_DEFORMABLE_BODY in App_GripperCloth.h to disable/enable the old solver.
-The cloth seems more damped for SoftBody while the actuation of the gripper mysteriously breaks after about 2-3 seconds of simulation. Need to look into it
-if that is the engine we would like go with.
+
 
 
 
