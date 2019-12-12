@@ -245,8 +245,8 @@ void App_GripperCloth::initPhysics()
 		   	btTransform(btQuaternion(btVector3(0, btScalar(1.0f), 0), btScalar(PI/2)), btVector3(0.0f, -0.1f, 0.0f)), true);
 
 		//useful to make the constraints more stiff, because of PBD?
-		m_gripperJoint1->setOverrideNumSolverIterations(30);
-		m_gripperJoint2->setOverrideNumSolverIterations(30);
+		m_gripperJoint1->setOverrideNumSolverIterations(40);
+		m_gripperJoint2->setOverrideNumSolverIterations(40);
 
 		m_gripperJoint1->setDbgDrawSize(btScalar(5.f));
 		m_gripperJoint2->setDbgDrawSize(btScalar(5.f));
