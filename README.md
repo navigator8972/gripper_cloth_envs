@@ -51,7 +51,7 @@ Note: the simulation window got stuck if we choose to render cloth texture. Look
 
 To use:
 
-1. Build bullet3; Tested on [commits](https://github.com/bulletphysics/bullet3/commit/08321b96ba43b9825274c96d0d550feaaf85ae91) on Dec 11th, 2019;
+1. Build bullet3; Tested on [commits](https://github.com/bulletphysics/bullet3/commit/ec2b6dd920135a5df804d521727cc06446a6a3bd) on Apr 3rd, 2020;
 
 2. Modify the path in env.sh to point to your Bullet SDK folder and source env.sh;
 
