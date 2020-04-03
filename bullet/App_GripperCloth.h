@@ -45,17 +45,30 @@ subject to the following restrictions:
 #include "LinearMath/btAlignedObjectArray.h"
 
 #include "CommonInterfaces/CommonRigidBodyBase.h"
+#include "CommonInterfaces/CommonDeformableBodyBase.h"
 
 #define USE_DEFORMABLE_BODY
 
 class btSoftRididCollisionAlgorithm;
 
+#ifndef USE_DEFORMABLE_BODY	
 struct App_GripperCloth : public CommonRigidBodyBase
+#else
+struct App_GripperCloth : public CommonDeformableBodyBase
+#endif
 {
+	
+#ifndef USE_DEFORMABLE_BODY
 	App_GripperCloth(struct GUIHelperInterface* helper)
 		: CommonRigidBodyBase(helper)
 	{
 	}
+#else
+	App_GripperCloth(struct GUIHelperInterface* helper)
+		: CommonDeformableBodyBase(helper)
+	{
+	}
+#endif
 	virtual ~App_GripperCloth() {}
 	virtual void initPhysics();
 	virtual void stepSimulation(float deltaTime);
@@ -106,17 +119,17 @@ struct App_GripperCloth : public CommonRigidBodyBase
 
 	virtual void renderScene()
     {
-        CommonRigidBodyBase::renderScene();
-        btDeformableMultiBodyDynamicsWorld* deformableWorld = getDeformableDynamicsWorld();
+		CommonDeformableBodyBase::renderScene();
+		// btDeformableMultiBodyDynamicsWorld* deformableWorld = getDeformableDynamicsWorld();
         
-        for (int i = 0; i < deformableWorld->getSoftBodyArray().size(); i++)
-        {
-            btSoftBody* psb = (btSoftBody*)deformableWorld->getSoftBodyArray()[i];
-            {
-                btSoftBodyHelpers::DrawFrame(psb, deformableWorld->getDebugDrawer());
-                btSoftBodyHelpers::Draw(psb, deformableWorld->getDebugDrawer(), deformableWorld->getDrawFlags());
-            }
-        }
+        // for (int i = 0; i < deformableWorld->getSoftBodyArray().size(); i++)
+        // {
+        //     btSoftBody* psb = (btSoftBody*)deformableWorld->getSoftBodyArray()[i];
+        //     {
+        //         btSoftBodyHelpers::DrawFrame(psb, deformableWorld->getDebugDrawer());
+        //         btSoftBodyHelpers::Draw(psb, deformableWorld->getDebugDrawer(), deformableWorld->getDrawFlags());
+        //     }
+        // }
     }
 	
 #else

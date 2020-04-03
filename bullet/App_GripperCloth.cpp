@@ -167,6 +167,7 @@ void App_GripperCloth::initPhysics()
 		psb->m_cfg.kDF = 1.5;  //dynamic friction, alleviate drifting on the pole
 		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RD;
 		psb->m_cfg.collisions |= btSoftBody::fCollision::VF_DD;
+		// psb->setSelfCollision(true);
 
 		//disable deactivation
 		// psb->setActivationState(DISABLE_DEACTIVATION);
@@ -177,10 +178,11 @@ void App_GripperCloth::initPhysics()
 
 #ifdef USE_DEFORMABLE_BODY		
 		getDeformableDynamicsWorld()->addSoftBody(psb);
-		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(.1,.05, true);
+		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(2,.1, true);
+		// psb->setSpringStiffness(2);
 		getDeformableDynamicsWorld()->addForce(psb, mass_spring);
-		btDeformableNeoHookeanForce* neohookean = new btDeformableNeoHookeanForce(20,10);
-		getDeformableDynamicsWorld()->addForce(psb, neohookean);
+		// btDeformableNeoHookeanForce* neohookean = new btDeformableNeoHookeanForce(20,10);
+		// getDeformableDynamicsWorld()->addForce(psb, neohookean);
 		getDeformableDynamicsWorld()->addForce(psb, new btDeformableGravityForce(gravity));
 #else
 		getSoftDynamicsWorld()->addSoftBody(psb);
