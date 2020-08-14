@@ -71,6 +71,7 @@ struct App_GripperCloth : public CommonDeformableBodyBase
 #endif
 	virtual ~App_GripperCloth() {}
 	virtual void initPhysics();
+	virtual void exitPhysics();
 	virtual void stepSimulation(float deltaTime);
 		
 #ifndef USE_DEFORMABLE_BODY	

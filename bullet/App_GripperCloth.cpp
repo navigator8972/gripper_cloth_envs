@@ -17,7 +17,7 @@ subject to the following restrictions:
 #include "App_GripperCloth.h"
 
 
-const btScalar PI(3.1415926535897932384626433832795028841972);
+const btScalar PI(SIMD_PI);
 
 
 void App_GripperCloth::initPhysics()
@@ -135,7 +135,7 @@ void App_GripperCloth::initPhysics()
 											0, true);
 #endif
 
-		psb->getCollisionShape()->setMargin(0.022);
+		psb->getCollisionShape()->setMargin(0.01);
 
 #ifndef USE_DEFORMABLE_BODY
 		btSoftBody::Material* pm = psb->appendMaterial();
@@ -164,9 +164,11 @@ void App_GripperCloth::initPhysics()
 		// psb->setDampingCoefficient(10);
 		psb->m_cfg.kKHR = 1; // collision hardness with kinematic objects
 		psb->m_cfg.kCHR = 1; // collision hardness with rigid body
-		psb->m_cfg.kDF = 1.5;  //dynamic friction, alleviate drifting on the pole
+		psb->m_cfg.kDF = 2.;  //dynamic friction, alleviate drifting on the pole
 		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RD;
-		psb->m_cfg.collisions |= btSoftBody::fCollision::VF_DD;
+		psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDN;
+    	psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDF;
+    	psb->m_cfg.collisions |= btSoftBody::fCollision::VF_DD;
 		// psb->setSelfCollision(true);
 
 		//disable deactivation
@@ -178,8 +180,8 @@ void App_GripperCloth::initPhysics()
 
 #ifdef USE_DEFORMABLE_BODY		
 		getDeformableDynamicsWorld()->addSoftBody(psb);
-		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(2,.1, true);
-		// psb->setSpringStiffness(2);
+		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(.2,.02, true);
+		psb->setSpringStiffness(2);
 		getDeformableDynamicsWorld()->addForce(psb, mass_spring);
 		// btDeformableNeoHookeanForce* neohookean = new btDeformableNeoHookeanForce(20,10);
 		// getDeformableDynamicsWorld()->addForce(psb, neohookean);
@@ -291,11 +293,10 @@ void App_GripperCloth::initPhysics()
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
-#ifndef USE_DEFORMABLE_BODY	
 void App_GripperCloth::exitPhysics()
 {
 	//cleanup in the reverse order of creation/initialization
-
+    // removePickingConstraint();
 	//remove the rigidbodies from the dynamics world and delete them
 	int i;
 	for (i = m_dynamicsWorld->getNumCollisionObjects() - 1; i >= 0; i--)
@@ -309,33 +310,34 @@ void App_GripperCloth::exitPhysics()
 		m_dynamicsWorld->removeCollisionObject(obj);
 		delete obj;
 	}
-
+#ifdef USE_DEFORMABLE_BODY
+    // delete forces
+    for (int j = 0; j < m_forces.size(); j++)
+    {
+        btDeformableLagrangianForce* force = m_forces[j];
+        delete force;
+    }
+    m_forces.clear();
+#endif
 	//delete collision shapes
 	for (int j = 0; j < m_collisionShapes.size(); j++)
 	{
 		btCollisionShape* shape = m_collisionShapes[j];
-		m_collisionShapes[j] = 0;
 		delete shape;
 	}
+	m_collisionShapes.clear();
 
-	//delete dynamics world
 	delete m_dynamicsWorld;
-	m_dynamicsWorld = 0;
 
-	//delete solver
 	delete m_solver;
 
-	//delete broadphase
 	delete m_broadphase;
 
-	//delete dispatcher
 	delete m_dispatcher;
 
 	delete m_collisionConfiguration;
 }
-#else
 
-#endif
 
 void App_GripperCloth::stepSimulation(float deltaTime)
 {
@@ -352,11 +354,13 @@ void App_GripperCloth::stepSimulation(float deltaTime)
 
 		m_gripperJoint1->setTargetLinMotorVelocity(m_gripperFingerVelocity);
 		m_gripperJoint2->setTargetLinMotorVelocity(-m_gripperFingerVelocity);
-		
+
+#ifndef USE_DEFORMABLE_BODY
 		m_dynamicsWorld->stepSimulation(deltaTime);
-		
-        // float internalTimeStep = 1. / 240.f;
-        // m_dynamicsWorld->stepSimulation(deltaTime, 4, internalTimeStep);
+#else
+        float internalTimeStep = 1. / 240.f;
+        m_dynamicsWorld->stepSimulation(deltaTime, 4, internalTimeStep);
+#endif
 	}
 }
 
