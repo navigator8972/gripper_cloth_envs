@@ -73,10 +73,6 @@ struct App_GripperCloth : public CommonDeformableBodyBase
 	virtual void initPhysics();
 	virtual void exitPhysics();
 	virtual void stepSimulation(float deltaTime);
-		
-#ifndef USE_DEFORMABLE_BODY	
-	void exitPhysics();
-#endif
 
 	void resetCamera()
 	{

@@ -73,15 +73,15 @@ def main():
 
     planeId = p.loadURDF("plane.urdf")
 
-    # clothId = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt.obj'), basePosition=[0, 0, 1.35], baseOrientation=[ 0, 0, 0.7071068, 0.7071068 ], scale=.9, 
+    clothId = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt.obj'), basePosition=[0, 0, 1.35], baseOrientation=[ 0, 0, 0.7071068, 0.7071068 ], scale=.9, 
+        collisionMargin=0.02, useMassSpring=1, mass=1, springElasticStiffness=10, springDampingStiffness=0.2, useBendingSprings=1, useFaceContact=1)
+    # clothId = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt_mia.obj'), basePosition=[0.02, 0, -0.05], baseOrientation=[ 0.5, 0.5, 0.5, 0.5 ], scale=.35, 
     #     collisionMargin=0.05, useMassSpring=1, mass=1, springElasticStiffness=8, springDampingStiffness=0.2, useBendingSprings=1)
-    clothId = p.loadSoftBody(fileName=os.path.join(assets_path, 'tshirt_mia.obj'), basePosition=[0.02, 0, -0.05], baseOrientation=[ 0.5, 0.5, 0.5, 0.5 ], scale=.35, 
-        collisionMargin=0.05, useMassSpring=1, mass=1, springElasticStiffness=8, springDampingStiffness=0.2, useBendingSprings=1)
     # cloth_mesh = p.getMeshData(clothId)
     # print(cloth_mesh[0], len(cloth_mesh[1]))
 
-    # humanoid = MyHumanoid(p)
-    # humanoid.fixBase()
+    humanoid = MyHumanoid(p)
+    humanoid.fixBase()
 
  
     runSimulation = False
@@ -90,7 +90,7 @@ def main():
     cubeId = p.loadURDF("cube_small.urdf", [0.1, 0.05, 1.6], [1, 0, 0, 0], True, True)
 
     #use official anchor feature for deformable body
-    p.createSoftBodyAnchor(clothId ,3,cubeId,-1, [0.5,-0.5,0])
+    # p.createSoftBodyAnchor(clothId ,3,cubeId,-1, [0.5,-0.5,0])
 
 
     # p.setRealTimeSimulation(1)

@@ -108,7 +108,7 @@ void App_GripperCloth::initPhysics()
 		btScalar mass(0.);
 
 		btRigidBody* stickBody = createRigidBody(mass, initTransform, stickShape, btVector4(0, 0, 0, 1));
-		stickBody->setFriction(0.2f);
+		stickBody->setFriction(0.3f);
 	}
 
 
@@ -122,7 +122,7 @@ void App_GripperCloth::initPhysics()
 											btVector3(+s, h, -s),
 											btVector3(-s, h, +s),
 											btVector3(+s, h, +s),
-											20,20,
+											10,10,
 											// 2,2,
 											0, true);
 #else
@@ -180,7 +180,7 @@ void App_GripperCloth::initPhysics()
 
 #ifdef USE_DEFORMABLE_BODY		
 		getDeformableDynamicsWorld()->addSoftBody(psb);
-		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(.2,.02, true);
+		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(.15,.01, true);
 		psb->setSpringStiffness(2);
 		getDeformableDynamicsWorld()->addForce(psb, mass_spring);
 		// btDeformableNeoHookeanForce* neohookean = new btDeformableNeoHookeanForce(20,10);
@@ -358,8 +358,9 @@ void App_GripperCloth::stepSimulation(float deltaTime)
 #ifndef USE_DEFORMABLE_BODY
 		m_dynamicsWorld->stepSimulation(deltaTime);
 #else
-        float internalTimeStep = 1. / 240.f;
-        m_dynamicsWorld->stepSimulation(deltaTime, 4, internalTimeStep);
+		m_dynamicsWorld->stepSimulation(deltaTime);
+        // float internalTimeStep = 1. / 240.f;
+        // m_dynamicsWorld->stepSimulation(deltaTime, 4, internalTimeStep);
 #endif
 	}
 }
