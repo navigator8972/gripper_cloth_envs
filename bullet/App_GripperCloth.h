@@ -73,6 +73,7 @@ struct App_GripperCloth : public CommonDeformableBodyBase
 	virtual void initPhysics();
 	virtual void exitPhysics();
 	virtual void stepSimulation(float deltaTime);
+	virtual btMultiBody* createGripper(const btTransform& pose);
 
 	void resetCamera()
 	{

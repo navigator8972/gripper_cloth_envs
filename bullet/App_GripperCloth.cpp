@@ -293,6 +293,58 @@ void App_GripperCloth::initPhysics()
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
+btMultiBody* App_GripperCloth::createGripper(const btTransform& pose)
+{
+	btVector3 baseInertiaDiag(0.f, 0.f, 0.f);
+	bool canSleep = false;
+	bool fixedBase = true;
+	float baseMass = 0.5;
+	
+
+    
+	//for base
+	btCollisionShape* gripperBasisShape = createBoxShape(btVector3(0.05f, 0.01f, 0.1f));
+	gripperBasisShape->calculateLocalInertia(baseMass, baseInertiaDiag);
+
+	btMultiBody* pMultiBody = new btMultiBody(3, baseMass, baseInertiaDiag, fixedBase, canSleep);
+	pMultiBody->setBaseWorldTransform(pose);	
+
+	btMultiBodyLinkCollider* gripperBasisCollider = new btMultiBodyLinkCollider(pMultiBody, -1);
+	gripperBasisCollider->setCollisionShape(gripperBasisShape);
+	gripperBasisCollider->setWorldTransform(pose);
+
+	pMultiBody->setBaseCollider(gripperBasisCollider);
+
+	//for fingers
+	btVector3 sliderJointAxis(0, 0, 1);
+	float gripperFingerMass = 0.5;
+	btVector3 gripperFingerInertiaDiag(0.f, 0.f, 0.f);
+	btCollisionShape* gripperFingerShape = createBoxShape(btVector3(0.05f, 0.1f, 0.02f));
+	gripperBasisShape->calculateLocalInertia(gripperFingerMass, gripperFingerInertiaDiag);
+	pMultiBody->setupPrismatic(0, gripperFingerMass, gripperFingerInertiaDiag, -1, btQuaternion(0.f, 0.f, 0.f, 1.f), 
+		sliderJointAxis, 
+		btVector3(0.0, -0.01f/2, (0.1f-0.02f)/2),		//parent com to current pivot offset
+		btVector3(0.0, 0.1f/2, 0.0),					//current pivot to current com offset
+		true											//disable parent collision
+		);
+	pMultiBody->setupPrismatic(1, gripperFingerMass, gripperFingerInertiaDiag, -1, btQuaternion(0.f, 0.f, 0.f, 1.f), 
+		sliderJointAxis, 
+		btVector3(0.0, -0.01f/2, -(0.1f-0.02f)/2),		//parent com to current pivot offset
+		btVector3(0.0, 0.1f/2, 0.0),					//current pivot to current com offset
+		true											//disable parent collision
+		);
+	
+	btMultiBodyLinkCollider* gripperFinger1Collider = new btMultiBodyLinkCollider(pMultiBody, 0);
+	btMultiBodyLinkCollider* gripperFinger2Collider = new btMultiBodyLinkCollider(pMultiBody, 1);
+	
+	gripperFinger1Collider->setCollisionShape(gripperFingerShape);
+	gripperFinger2Collider->setCollisionShape(gripperFingerShape);
+
+
+
+	return pMultiBody;
+}
+
 void App_GripperCloth::exitPhysics()
 {
 	//cleanup in the reverse order of creation/initialization
