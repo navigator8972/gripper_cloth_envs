@@ -73,7 +73,6 @@ struct App_GripperCloth : public CommonDeformableBodyBase
 	virtual void initPhysics();
 	virtual void exitPhysics();
 	virtual void stepSimulation(float deltaTime);
-	virtual btMultiBody* createGripper(const btTransform& pose);
 
 	void resetCamera()
 	{
@@ -100,17 +99,24 @@ struct App_GripperCloth : public CommonDeformableBodyBase
 	btSliderConstraint*             m_gripperJoint1;
 	btSliderConstraint*             m_gripperJoint2;
 
+#ifndef USE_DEFORMABLE_BODY
+	btMultiBody*					m_gripper;
+#endif
+
     btVector3   m_gripperVelocity;
     btScalar    m_gripperFingerVelocity;
 
 	//it is a bit messy to keep both soft and deformable worlds, try to condition the compilation later
+
 #ifdef USE_DEFORMABLE_BODY
-	virtual const btDeformableMultiBodyDynamicsWorld* getDeformableDynamicsWorld() const
+	virtual btMultiBody* createGripper(const btTransform& pose);
+
+	virtual const btDeformableMultiBodyDynamicsWorld* getDynamicsWorld() const
     {
         return (btDeformableMultiBodyDynamicsWorld*)m_dynamicsWorld;
     }
     
-    virtual btDeformableMultiBodyDynamicsWorld* getDeformableDynamicsWorld()
+    virtual btDeformableMultiBodyDynamicsWorld* getDynamicsWorld()
     {
         return (btDeformableMultiBodyDynamicsWorld*)m_dynamicsWorld;
     }
@@ -118,27 +124,28 @@ struct App_GripperCloth : public CommonDeformableBodyBase
 	virtual void renderScene()
     {
 		CommonDeformableBodyBase::renderScene();
-		// btDeformableMultiBodyDynamicsWorld* deformableWorld = getDeformableDynamicsWorld();
+
+		btDeformableMultiBodyDynamicsWorld* deformableWorld = getDeformableDynamicsWorld();
         
-        // for (int i = 0; i < deformableWorld->getSoftBodyArray().size(); i++)
-        // {
-        //     btSoftBody* psb = (btSoftBody*)deformableWorld->getSoftBodyArray()[i];
-        //     {
-        //         btSoftBodyHelpers::DrawFrame(psb, deformableWorld->getDebugDrawer());
-        //         btSoftBodyHelpers::Draw(psb, deformableWorld->getDebugDrawer(), deformableWorld->getDrawFlags());
-        //     }
-        // }
+        for (int i = 0; i < deformableWorld->getSoftBodyArray().size(); i++)
+        {
+            btSoftBody* psb = (btSoftBody*)deformableWorld->getSoftBodyArray()[i];
+            {
+                btSoftBodyHelpers::DrawFrame(psb, deformableWorld->getDebugDrawer());
+				btSoftBodyHelpers::Draw(psb, deformableWorld->getDebugDrawer(), fDrawFlags::Faces);// deformableWorld->getDrawFlags());
+            }
+        }
     }
 	
 #else
-	virtual const btSoftRigidDynamicsWorld* getSoftDynamicsWorld() const
+	virtual const btSoftRigidDynamicsWorld* getDynamicsWorld() const
 	{
 		///just make it a btSoftRigidDynamicsWorld please
 		///or we will add type checking
 		return (btSoftRigidDynamicsWorld*)m_dynamicsWorld;
 	}
 
-	virtual btSoftRigidDynamicsWorld* getSoftDynamicsWorld()
+	virtual btSoftRigidDynamicsWorld* getDynamicsWorld()
 	{
 		///just make it a btSoftRigidDynamicsWorld please
 		///or we will add type checking
@@ -148,7 +155,7 @@ struct App_GripperCloth : public CommonDeformableBodyBase
 	virtual void renderScene()
 	{
 		CommonRigidBodyBase::renderScene();
-		btSoftRigidDynamicsWorld* softWorld = getSoftDynamicsWorld();
+		btSoftRigidDynamicsWorld* softWorld = getDynamicsWorld();
 
 		for (int i = 0; i < softWorld->getSoftBodyArray().size(); i++)
 		{

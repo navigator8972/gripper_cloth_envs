@@ -42,10 +42,10 @@ void App_GripperCloth::initPhysics()
 	
 	btVector3 gravity = btVector3(0, -9.81, 0);
 	m_dynamicsWorld->setGravity(gravity);
-	getDeformableDynamicsWorld()->getWorldInfo().m_gravity = gravity;
+	getDynamicsWorld()->getWorldInfo().m_gravity = gravity;
 	
 	//set to use implicit integration or not. 
-	getDeformableDynamicsWorld()->setImplicit(false);
+	getDynamicsWorld()->setImplicit(false);
 #else
 
 	btVector3 worldAabbMin(-1000, -1000, -1000);
@@ -73,10 +73,6 @@ void App_GripperCloth::initPhysics()
 	m_softBodyWorldInfo.m_dispatcher = m_dispatcher;
 
 #endif
-
-	
-//    deformableBodySolver->setWorld(getDeformableDynamicsWorld());
-    
     
 	m_guiHelper->createPhysicsDebugDrawer(m_dynamicsWorld);
 
@@ -87,28 +83,58 @@ void App_GripperCloth::initPhysics()
 		//groundShape->initializePolyhedralFeatures();
 		//btCollisionShape* groundShape = new btStaticPlaneShape(btVector3(0,1,0),50);
 
-		m_collisionShapes.push_back(groundShape);
+		// m_collisionShapes.push_back(groundShape);
 
 		btTransform groundTransform;
 		groundTransform.setIdentity();
 		groundTransform.setOrigin(btVector3(0, -50, 0));
 		btScalar mass(0.);
-		createRigidBody(mass, groundTransform, groundShape, btVector4(0, 0, 1, 1));
+
+		bool isDynamic = (mass != 0.f);
+
+        // btVector3 localInertia(0, 0, 0);
+        // if (isDynamic)
+        //     groundShape->calculateLocalInertia(mass, localInertia);
+		
+		// btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+        // btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
+        // btRigidBody* body = new btRigidBody(rbInfo);
+        // body->setFriction(0.5);
+
+        // //add the ground to the dynamics world
+        // m_dynamicsWorld->addRigidBody(body,1,1+2);
+
+		btRigidBody* ground = createRigidBody(mass, groundTransform, groundShape, btVector4(0, 0, 1, 1));
+		ground->setFriction(0.5);
 	}
 
 	// create a stick
 	{
 		btCapsuleShape* stickShape = new btCapsuleShape(0.02, 1);
 		// stickShape->setMargin(0.05);
-		m_collisionShapes.push_back(stickShape);
+		// m_collisionShapes.push_back(stickShape);
 
-		btTransform initTransform(btQuaternion(btVector3(0, 0, btScalar(1.0f)), btScalar(PI/2)), btVector3(0.0, 0.5f, 0.0));
+		btTransform stickTransform(btQuaternion(btVector3(0, 0, btScalar(1.0f)), btScalar(PI/2)), btVector3(0.0, 0.5f, 0.0));
 
 
 		btScalar mass(0.);
 
-		btRigidBody* stickBody = createRigidBody(mass, initTransform, stickShape, btVector4(0, 0, 0, 1));
-		stickBody->setFriction(0.3f);
+		// bool isDynamic = (mass != 0.f);
+
+        // btVector3 localInertia(0, 0, 0);
+        // if (isDynamic)
+        //     stickShape->calculateLocalInertia(mass, localInertia);
+		
+		// btDefaultMotionState* myMotionState = new btDefaultMotionState(stickTransform);
+        // btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, stickShape, localInertia);
+        // btRigidBody* body = new btRigidBody(rbInfo);
+        // body->setFriction(0.3);
+
+        // //add the ground to the dynamics world
+        // m_dynamicsWorld->addRigidBody(body,1,1+2);
+
+		btRigidBody* stick = createRigidBody(mass, stickTransform, stickShape, btVector4(0, 0, 1, 1));
+		stick->setFriction(0.3);
 	}
 
 
@@ -118,7 +144,7 @@ void App_GripperCloth::initPhysics()
        const btScalar h = 0.6;
 
 #ifdef USE_DEFORMABLE_BODY
-		btSoftBody* psb = btSoftBodyHelpers::CreatePatch(getDeformableDynamicsWorld()->getWorldInfo(), btVector3(-s, h, -s),
+		btSoftBody* psb = btSoftBodyHelpers::CreatePatch(getDynamicsWorld()->getWorldInfo(), btVector3(-s, h, -s),
 											btVector3(+s, h, -s),
 											btVector3(-s, h, +s),
 											btVector3(+s, h, +s),
@@ -136,27 +162,9 @@ void App_GripperCloth::initPhysics()
 #endif
 
 		psb->getCollisionShape()->setMargin(0.01);
+		
+#ifdef USE_DEFORMABLE_BODY		
 
-#ifndef USE_DEFORMABLE_BODY
-		btSoftBody::Material* pm = psb->appendMaterial();
-		pm->m_kLST = 0.4;
-		pm->m_flags -= btSoftBody::fMaterial::DebugDraw;
-		psb->generateBendingConstraints(2, pm);
-		psb->setTotalMass(0.1);
-
-		psb->m_cfg.piterations = 30;
-		psb->m_cfg.citerations = 30;
-		psb->m_cfg.diterations = 30;
-
-		//dynamic friction, alleviate drifting on the pole
-		psb->m_cfg.kDF = 2;
-		// psb->generateClusters(32);
-		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RS;
-		psb->m_cfg.collisions |= btSoftBody::fCollision::CL_SELF;
-		// psb->m_cfg.collisions = btSoftBody::fCollision::CL_SS + btSoftBody::fCollision::CL_RS
-		// + btSoftBody::fCollision::CL_SELF
-		// ;
-#else
 		psb->generateBendingConstraints(2);
 		// psb->generateClusters(32);
 		psb->setTotalMass(0.1);
@@ -173,21 +181,34 @@ void App_GripperCloth::initPhysics()
 
 		//disable deactivation
 		// psb->setActivationState(DISABLE_DEACTIVATION);
-#endif
 
-		
-
-
-#ifdef USE_DEFORMABLE_BODY		
-		getDeformableDynamicsWorld()->addSoftBody(psb);
+		getDynamicsWorld()->addSoftBody(psb);
 		btDeformableMassSpringForce* mass_spring = new btDeformableMassSpringForce(.15,.01, true);
 		psb->setSpringStiffness(2);
-		getDeformableDynamicsWorld()->addForce(psb, mass_spring);
+		getDynamicsWorld()->addForce(psb, mass_spring);
 		// btDeformableNeoHookeanForce* neohookean = new btDeformableNeoHookeanForce(20,10);
-		// getDeformableDynamicsWorld()->addForce(psb, neohookean);
-		getDeformableDynamicsWorld()->addForce(psb, new btDeformableGravityForce(gravity));
+		// getDynamicsWorld()->addForce(psb, neohookean);
+		getDynamicsWorld()->addForce(psb, new btDeformableGravityForce(gravity));
 #else
-		getSoftDynamicsWorld()->addSoftBody(psb);
+		btSoftBody::Material* pm = psb->appendMaterial();
+		pm->m_kLST = 0.4;
+		pm->m_flags -= btSoftBody::fMaterial::DebugDraw;
+		psb->generateBendingConstraints(2, pm);
+		psb->setTotalMass(0.1);
+
+		psb->m_cfg.piterations = 30;
+		psb->m_cfg.citerations = 30;
+		psb->m_cfg.diterations = 30;
+
+		//dynamic friction, alleviate drifting on the pole
+		psb->m_cfg.kDF = 2;
+		// psb->generateClusters(32);
+		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RS;
+		psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDN;
+    	psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDF;
+		// ;
+
+		getDynamicsWorld()->addSoftBody(psb);
 #endif
    }
 
@@ -275,16 +296,16 @@ void App_GripperCloth::initPhysics()
 		
 
 		//true to disable link between constrained bodies
-#ifdef USE_DEFORMABLE_BODY
-		getDeformableDynamicsWorld()->addConstraint(m_gripperBaseJoint, true);
-		getDeformableDynamicsWorld()->addConstraint(m_gripperJoint1, true);
-		getDeformableDynamicsWorld()->addConstraint(m_gripperJoint2, true);
-#else
-		getSoftDynamicsWorld()->addConstraint(m_gripperBaseJoint, true);
-		getSoftDynamicsWorld()->addConstraint(m_gripperJoint1, true);
-		getSoftDynamicsWorld()->addConstraint(m_gripperJoint2, true);
-#endif
+		getDynamicsWorld()->addConstraint(m_gripperBaseJoint, true);
+		getDynamicsWorld()->addConstraint(m_gripperJoint1, true);
+		getDynamicsWorld()->addConstraint(m_gripperJoint2, true);
 
+		// for multibody gripper, stick to rigid bodies now for the compatibility to PBD
+		// btTransform gripperBasisTransform;
+		// gripperBasisTransform.setIdentity();
+		// gripperBasisTransform.setOrigin(btVector3(0.0, 0.05f, 0.0f));
+		// m_gripper = createGripper(gripperBasisTransform);
+		
 		//initialize velocity
 		m_gripperVelocity = btVector3(0, 0, 0);
 		m_gripperFingerVelocity = 0.0f;
@@ -293,57 +314,103 @@ void App_GripperCloth::initPhysics()
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
+#ifdef USE_DEFORMABLE_BODY
+
 btMultiBody* App_GripperCloth::createGripper(const btTransform& pose)
 {
 	btVector3 baseInertiaDiag(0.f, 0.f, 0.f);
 	bool canSleep = false;
-	bool fixedBase = true;
+	bool fixedBase = false;
 	float baseMass = 0.5;
-	
 
-    
 	//for base
 	btCollisionShape* gripperBasisShape = createBoxShape(btVector3(0.05f, 0.01f, 0.1f));
+	gripperBasisShape->setMargin(0.001f);
+	// m_collisionShapes.push_back(gripperBasisShape);
 	gripperBasisShape->calculateLocalInertia(baseMass, baseInertiaDiag);
 
-	btMultiBody* pMultiBody = new btMultiBody(3, baseMass, baseInertiaDiag, fixedBase, canSleep);
+	btMultiBody* pMultiBody = new btMultiBody(2, baseMass, baseInertiaDiag, fixedBase, canSleep);
 	pMultiBody->setBaseWorldTransform(pose);	
 
 	btMultiBodyLinkCollider* gripperBasisCollider = new btMultiBodyLinkCollider(pMultiBody, -1);
 	gripperBasisCollider->setCollisionShape(gripperBasisShape);
 	gripperBasisCollider->setWorldTransform(pose);
+	gripperBasisCollider->setFriction(0.2f);
 
 	pMultiBody->setBaseCollider(gripperBasisCollider);
+	m_dynamicsWorld->addCollisionObject(gripperBasisCollider,1,1+2);
 
 	//for fingers
 	btVector3 sliderJointAxis(0, 0, 1);
 	float gripperFingerMass = 0.5;
 	btVector3 gripperFingerInertiaDiag(0.f, 0.f, 0.f);
 	btCollisionShape* gripperFingerShape = createBoxShape(btVector3(0.05f, 0.1f, 0.02f));
+	gripperFingerShape->setMargin(0.001);
 	gripperBasisShape->calculateLocalInertia(gripperFingerMass, gripperFingerInertiaDiag);
 	pMultiBody->setupPrismatic(0, gripperFingerMass, gripperFingerInertiaDiag, -1, btQuaternion(0.f, 0.f, 0.f, 1.f), 
 		sliderJointAxis, 
-		btVector3(0.0, -0.01f/2, (0.1f-0.02f)/2),		//parent com to current pivot offset
-		btVector3(0.0, 0.1f/2, 0.0),					//current pivot to current com offset
+		btVector3(0.0, 0.01f, 0.1f-0.02f),		//parent com to current pivot offset
+		btVector3(0.0, 0.1f, 0.0),					//current pivot to current com offset
 		true											//disable parent collision
 		);
 	pMultiBody->setupPrismatic(1, gripperFingerMass, gripperFingerInertiaDiag, -1, btQuaternion(0.f, 0.f, 0.f, 1.f), 
 		sliderJointAxis, 
-		btVector3(0.0, -0.01f/2, -(0.1f-0.02f)/2),		//parent com to current pivot offset
-		btVector3(0.0, 0.1f/2, 0.0),					//current pivot to current com offset
+		btVector3(0.0, 0.01f, -(0.1f-0.02f)),		//parent com to current pivot offset
+		btVector3(0.0, 0.1f, 0.0),					//current pivot to current com offset
 		true											//disable parent collision
 		);
 	
-	btMultiBodyLinkCollider* gripperFinger1Collider = new btMultiBodyLinkCollider(pMultiBody, 0);
-	btMultiBodyLinkCollider* gripperFinger2Collider = new btMultiBodyLinkCollider(pMultiBody, 1);
-	
-	gripperFinger1Collider->setCollisionShape(gripperFingerShape);
-	gripperFinger2Collider->setCollisionShape(gripperFingerShape);
+	//need to figure out local pose for collision bodies
+	btAlignedObjectArray<btQuaternion> world_to_local;
+    world_to_local.resize(pMultiBody->getNumLinks() + 1);
+	btAlignedObjectArray<btVector3> local_origin;
+    local_origin.resize(pMultiBody->getNumLinks() + 1);
+    world_to_local[0] = pMultiBody->getWorldToBaseRot();
+    local_origin[0] = pMultiBody->getBasePos();
+
+	// printf("num of links %d\n", pMultiBody->getNumLinks());
+
+	for (int i = 0; i < pMultiBody->getNumLinks(); ++i)
+    {
+        const int parent = pMultiBody->getParent(i);
+        world_to_local[i + 1] = pMultiBody->getParentToLocalRot(i) * world_to_local[parent + 1];
+        local_origin[i + 1] = local_origin[parent + 1] + (quatRotate(world_to_local[i + 1].inverse(), pMultiBody->getRVector(i)));
+    }
+
+	for (int i = 0; i < pMultiBody->getNumLinks(); ++i)
+    {
+        btVector3 posr = local_origin[i + 1];
+        
+        btScalar quat[4] = {-world_to_local[i + 1].x(), -world_to_local[i + 1].y(), -world_to_local[i + 1].z(), world_to_local[i + 1].w()};
+        
+		// m_collisionShapes.push_back(gripperFingerShape);
+        
+        btMultiBodyLinkCollider* col = new btMultiBodyLinkCollider(pMultiBody, i);
+        
+        col->setCollisionShape(gripperFingerShape);
+        btTransform tr;
+        tr.setIdentity();
+        tr.setOrigin(posr);
+        tr.setRotation(btQuaternion(quat[0], quat[1], quat[2], quat[3]));
+        col->setWorldTransform(tr);
+        col->setFriction(0.2f);
+
+		m_dynamicsWorld->addCollisionObject(col,1,1+2);
+        
+        pMultiBody->getLink(i).m_collider = col;
+    }
+
+	//prepare motors for two finger links
 
 
+	pMultiBody->finalizeMultiDof();
+    ///
+    m_dynamicsWorld->addMultiBody(pMultiBody);
 
 	return pMultiBody;
 }
+
+#endif
 
 void App_GripperCloth::exitPhysics()
 {
@@ -396,10 +463,6 @@ void App_GripperCloth::stepSimulation(float deltaTime)
 	if (m_dynamicsWorld)
 	{
 		//set gripper velocity
-		// btTransform curr_pose = m_gripperBase->getCenterOfMassTransform();
-		// curr_pose.setOrigin(curr_pose.getOrigin()+m_gripperVelocity);
-		// m_gripperBase->setCenterOfMassTransform(curr_pose);
-		// printf("Setting gripper velocity: %f, %f, %f\n", m_gripperVelocity[0], m_gripperVelocity[1], m_gripperVelocity[2]);
 		m_gripperBaseJoint->getTranslationalLimitMotor()->m_targetVelocity[0] = m_gripperVelocity[0];
 		m_gripperBaseJoint->getTranslationalLimitMotor()->m_targetVelocity[1] = m_gripperVelocity[1];
 		m_gripperBaseJoint->getTranslationalLimitMotor()->m_targetVelocity[2] = m_gripperVelocity[2];
