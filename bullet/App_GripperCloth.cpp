@@ -191,24 +191,36 @@ void App_GripperCloth::initPhysics()
 		getDynamicsWorld()->addForce(psb, new btDeformableGravityForce(gravity));
 #else
 		btSoftBody::Material* pm = psb->appendMaterial();
-		pm->m_kLST = 0.4;
+		pm->m_kLST = 0.5;
+		pm->m_kAST = 0;
+        pm->m_kVST = 0;
+
 		pm->m_flags -= btSoftBody::fMaterial::DebugDraw;
 		psb->generateBendingConstraints(2, pm);
 		psb->setTotalMass(0.1);
+		psb->getCollisionShape()->setMargin(0.02);
+    	psb->getCollisionShape()->setUserPointer(psb);
+		psb->randomizeConstraints();
 
-		psb->m_cfg.piterations = 30;
-		psb->m_cfg.citerations = 30;
-		psb->m_cfg.diterations = 30;
+		psb->m_cfg.piterations = 20;
+		psb->m_cfg.citerations = 3;
+		psb->m_cfg.diterations = 3;
 
 		//dynamic friction, alleviate drifting on the pole
 		psb->m_cfg.kDF = 2;
-		// psb->generateClusters(32);
+		psb->m_cfg.kVCF = 1;
+        psb->m_cfg.kDP = 0.1;
+        psb->m_cfg.kDG = 0;
+
+		psb->generateClusters(32);
+
 		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RS;
 		psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDN;
     	psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDF;
 		// ;
 
 		getDynamicsWorld()->addSoftBody(psb);
+		m_guiHelper->createCollisionShapeGraphicsObject(psb->getCollisionShape());
 #endif
    }
 
@@ -237,6 +249,9 @@ void App_GripperCloth::initPhysics()
 		m_gripperBase->setActivationState(DISABLE_DEACTIVATION);
 		finger1->setActivationState(DISABLE_DEACTIVATION);
 		finger2->setActivationState(DISABLE_DEACTIVATION);
+
+		finger1->setFriction(0.3);
+		finger2->setFriction(0.3);
 
 		//constraint to the world, similar to MuJoCo
 		m_gripperBaseJoint = new btGeneric6DofConstraint(*m_gripperBase, gripperBasisTransform, false);
