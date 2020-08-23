@@ -202,22 +202,27 @@ void App_GripperCloth::initPhysics()
     	psb->getCollisionShape()->setUserPointer(psb);
 		psb->randomizeConstraints();
 
-		psb->m_cfg.piterations = 20;
+		psb->m_cfg.piterations = 30;
 		psb->m_cfg.citerations = 3;
 		psb->m_cfg.diterations = 3;
 
 		//dynamic friction, alleviate drifting on the pole
-		psb->m_cfg.kDF = 2;
+		psb->m_cfg.kDF = 0.5;
 		psb->m_cfg.kVCF = 1;
         psb->m_cfg.kDP = 0.1;
         psb->m_cfg.kDG = 0;
 
 		psb->generateClusters(32);
 
-		psb->m_cfg.collisions = btSoftBody::fCollision::SDF_RS;
 		psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDN;
     	psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDF;
 		// ;
+		// psb->m_cfg.collisions |= btSoftBody::fCollision::VF_SS;
+
+		// for clusters: looks more suitable for solids
+		// psb->m_cfg.collisions = btSoftBody::fCollision::CL_SS +
+		// 						btSoftBody::fCollision::CL_RS;
+
 
 		getDynamicsWorld()->addSoftBody(psb);
 		m_guiHelper->createCollisionShapeGraphicsObject(psb->getCollisionShape());
