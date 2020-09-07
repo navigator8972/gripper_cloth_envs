@@ -148,7 +148,7 @@ void App_GripperCloth::initPhysics()
 											btVector3(+s, h, -s),
 											btVector3(-s, h, +s),
 											btVector3(+s, h, +s),
-											10,10,
+											16,16,
 											// 2,2,
 											0, true);
 #else
@@ -202,24 +202,34 @@ void App_GripperCloth::initPhysics()
     	psb->getCollisionShape()->setUserPointer(psb);
 		psb->randomizeConstraints();
 
-		psb->m_cfg.piterations = 30;
-		psb->m_cfg.citerations = 3;
-		psb->m_cfg.diterations = 3;
+		psb->m_cfg.piterations = 5;
+		psb->m_cfg.citerations = 0;
+		psb->m_cfg.diterations = 0;
 
 		//dynamic friction, alleviate drifting on the pole
-		psb->m_cfg.kDF = 0.5;
+		psb->m_cfg.kDF = 1;
 		psb->m_cfg.kVCF = 1;
         psb->m_cfg.kDP = 0.1;
         psb->m_cfg.kDG = 0;
 
-		psb->generateClusters(32);
+		// psb->generateClusters(96);
 
-		psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDN;
-    	psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDF;
+		// psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDN;
+    	// psb->m_cfg.collisions |= btSoftBody::fCollision::SDF_RDF;
 		// ;
 		// psb->m_cfg.collisions |= btSoftBody::fCollision::VF_SS;
 
 		// for clusters: looks more suitable for solids
+			// psb->m_cfg.kDF = 1;
+			// psb->m_cfg.kSSHR_CL = 1;
+			// psb->m_cfg.kSS_SPLT_CL = 0;
+			// psb->m_cfg.kSKHR_CL = 0.1f;
+			// psb->m_cfg.kSK_SPLT_CL = 1;
+		psb->m_cfg.kCHR = .8;
+		psb->m_cfg.kKHR = .8;
+		psb->m_cfg.kSHR = 1;
+		psb->m_cfg.kAHR = 1.;
+
 		// psb->m_cfg.collisions = btSoftBody::fCollision::CL_SS +
 		// 						btSoftBody::fCollision::CL_RS;
 
@@ -331,6 +341,7 @@ void App_GripperCloth::initPhysics()
 		m_gripperFingerVelocity = 0.0f;
 	}
 
+	m_softBodyWorldInfo.m_sparsesdf.Reset();
 	m_guiHelper->autogenerateGraphicsObjects(m_dynamicsWorld);
 }
 
