@@ -94,6 +94,8 @@ struct App_GripperCloth : public CommonDeformableBodyBase
 
 	btAlignedObjectArray<btCollisionShape*> m_collisionShapes;
 
+	btMultiBody*					m_gripperMultiBody;
+
 	btRigidBody*                    m_gripperBase;
     btGeneric6DofConstraint*        m_gripperBaseJoint;
 	btSliderConstraint*             m_gripperJoint1;

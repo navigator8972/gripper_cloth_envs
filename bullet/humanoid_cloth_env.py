@@ -79,6 +79,8 @@ def main():
     #     collisionMargin=0.05, useMassSpring=1, mass=1, springElasticStiffness=8, springDampingStiffness=0.2, useBendingSprings=1)
     # cloth_mesh = p.getMeshData(clothId)
     # print(cloth_mesh[0], len(cloth_mesh[1]))
+    # clothId = p.loadSoftBody(fileName=os.path.join(assets_path, 'hospitalgown_adaptivereduce.obj'), basePosition=[0, 0, 2.35], baseOrientation=[ 0, 0, 0.7071068, 0.7071068 ], scale=.9, 
+    #     collisionMargin=0.02, useMassSpring=1, mass=1, springElasticStiffness=10, springDampingStiffness=0.2, useBendingSprings=1, useFaceContact=1)
 
     humanoid = MyHumanoid(p)
     humanoid.fixBase()
