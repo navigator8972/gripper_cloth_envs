@@ -1,7 +1,9 @@
 # gripper_cloth_envs
 SOFA/PhysX/MuJoCo/Bullet environments for testing gripper and cloth interaction
 
+<img src="./assets/imgs/snapshot_sofa.png" width="320" /><img src="./assets/imgs/snapshot_physx.png" width="320" />
 
+<img src="./assets/imgs/snapshot_mujoco.png" width="320" /><img src="./assets/imgs/snapshot_bullet.png" width="320" />
 
 ### SOFA: [Simulation Open Framework Architecture](https://github.com/sofa-framework/sofa)
 
