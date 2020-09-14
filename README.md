@@ -52,6 +52,7 @@ Note: the simulation window got stuck if we choose to render cloth texture. Look
 To use:
 
 1. Build bullet3; Tested on [commits](https://github.com/bulletphysics/bullet3/commit/2c9a55da540b065a8cb0ad160179c7f46e5a27e1) on Aug 14th, 2020;
+   Simulating deformable bodies appears to be faster on [commits](https://github.com/bulletphysics/bullet3/commit/ec2b6dd920135a5df804d521727cc06446a6a3bd) of Apr 3rd, 2020;
 
 2. Modify the path in env.sh to point to your Bullet SDK folder and source env.sh;
 
